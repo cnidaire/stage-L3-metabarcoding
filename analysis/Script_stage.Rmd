@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Package à nécessaires
-```{r}
+```{r warning=FALSE}
 library(reshape)
 library(ROBITools2) #analyse des données métabarcoding
 library(ggplot2) #affichage graphique avancé
@@ -53,10 +53,10 @@ sum(data[data$motu == "GH000001",]$count)  #   attention, ne fonctionne pas et j
 ```
 plus practique je pense
 ```{r}
-summary(motus)
-summary(data)
-summary(samples)
-summary(reference)
+# summary(motus)
+# summary(data)
+# summary(samples)
+# summary(reference)
 ```
 
 ce que contiennent les jeux de données:
@@ -82,7 +82,7 @@ il suffirait de le faire en boucle for allant de 1 à length(motu) (ce n'est pas
 ```{r}
 # View(motus)
 # View(data)
-View(samples)
+# View(samples)
 # View(reference)
 # pour avoir nombre colonne et de lignes de motus:
 length(motus)
@@ -229,7 +229,7 @@ for (c in 1:nrow(motus)) {
 # attention, la façon d'écrire et beaucoup plus belle et efficace dans R que d'utiliser une boucle for comme laissé précédemment, à retenir.
 
 View(motus)
-!is.na(motus$espece)
+# !is.na(motus$espece)
 ```
 il faut donc vérifier si deux séquences sont similaires et si elles sont égales alors remplacer le 0 par le nom de l'espèce que l'on a trouvé.
 on ne put pas utiliser une deuxième boucle for, cela serait trop lent, il va donc falloir parcourir la base de données en utilisant robitools mais je ne suis pas sûr qu'en faisant cela, on puisse récupérer le nom de la séquence de réf correspondant.
@@ -331,6 +331,8 @@ que se passe il quand q tend vers infini
 
 ```
 
+## Étude des Ps, de leurs répartition et de leurs répartition selon leurs présence ou non dans la base de données.
+
 tracer l'histogramme des log(ps) ainsi que ceux des log(ps) présents dans la référence et un autre avec ceux qui n'y sont pas
 
 ```{r}
@@ -340,10 +342,10 @@ for (f in 1:nrow(motus)) {
   ps <- c(ps,motus$count[f]/sum(motus$count))
   
 }
-qplot(ps)+scale_y_log10()+scale_x_log10()
+qplot(ps, main = "Histogramme de répartition ps ADN séquencé")+scale_y_log10()+scale_x_log10()
 # dans le cas où on observe tout les ps
 ```
-
+On peut  observer que très peu d'espèces ont un ps supérieur à 10^-2, et sont donc extremement représenté dans le nombre de lectures alors que la plus part des espèces ontmoins de 10^-2.
 
 ```{r}
 ps <- c()
@@ -352,10 +354,10 @@ for (g in 1:nrow(motus)) {
     ps <- c(ps,motus$count[g]/sum(motus$count[motus$dans_ref==T]))
   }
 }
-qplot(ps)
+qplot(ps, main = "Histogramme de répartition ps espèces présentes dans fichier réference")
 # dans le cas où on observe juste ceux présents dans la base de données de référence
 ```
-
+Ici, on peut voir que la quasi totalité  des 
 
 ```{r}
 ps <- c()
@@ -364,12 +366,36 @@ for (h in 1:nrow(motus)) {
     ps <- c(ps,motus$count[h]/sum(motus$count[motus$dans_ref==F]))
   }
 }
-qplot(ps)+scale_y_log10()+scale_x_log10()
+qplot(ps, main = "Histogramme de répartition ps séquences absentes fichier réference")+scale_y_log10()+scale_x_log10()
 # dans le cas où on observe juste ceux non présents dans la base de données de référence
+```
+*je pense qu'il sera dur de tirer des conclusions en comparant les différents graph étant donné que pour obtenir ps, on divise pas la somme des counts, qui n'est pas la même, ce sont donc deux infos mais difficilement comparables*
+
+
+
+### re-agréger les données de data_count  afin de vérifier si on obtient bien motus_count
+
+```{r}
+data_count <- s # n() est une fonction de décompte
+# donc il y a un problème car j'obtient le nombre de fois que le motu apparais dans data
+
+
+nrow(data_count)
+data_count
+
+data_count$count == motus$count
+
 ```
 
 
-re-agréger les données de data_count  afin de vérifier si on obtient bien motus_count
+
+
+
+
+
+
+
+
 
 motus agrégé (ça je ne me souviens plus de ce que je devais faire).
 
