@@ -19,3 +19,27 @@ Jusqu'à "étude de la distance entre les variants" dans [mon sujet](doc/stageL3
 - mise à jour du journal qui n'avais quasi pas été faite.
 - data%>%group_by(motu)%>%summarise(count = sum(count)) est une manière d'écrire super pratique et efficace
 - verification qu'il y a bien la meme nombre de lecture par motu dans le fichier data et dans le fichier motu
+- j'ai appris à créer proprement un data frame:
+        df <- NULL
+        length(unique(data$sample))*4
+        for (ech in unique(data$sample) ) {
+          df <- rbind(df, data.frame(sample=ech,
+                      q=nombre_q,
+                      Qd=NA))
+        }
+        df
+- façon super d'effectuer de calculs sur des data frame:
+        q = 
+        somme = 0
+        if (q == 1) {
+        
+            ps=((data[data$sample == "~04A_1",]$count)/(sum(data[data$sample == "~04A_1",]$count)))
+            somme = sum(ps*log(ps))
+          Hill <- exp(-somme)
+        }else{
+              ps=((data[data$sample == "~04A_1",]$count)/(sum(data[data$sample == "~04A_1",]$count)))
+            somme = sum(ps^q)
+            print("b")
+          Hill <- somme^(1/(1-q))
+        }
+        print(Hill)

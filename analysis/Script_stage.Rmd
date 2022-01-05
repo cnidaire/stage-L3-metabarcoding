@@ -428,19 +428,121 @@ length(nom_sample)
 matrice
 ```
 ```{r}
-nombre_q <- seq(1,10,0.5)
+nombre_q <- seq(1,1,1)
 nom_sample <- unique(data$sample)
 length(nom_sample) # nombre d'échantillons différents
-vecteur <- c(rep(1,length(nom_sample)*length(nombre_q))) #création d'un vecteur de taille nombre d'échantillons * nombre de valeurs de q
-
+vecteur <- c(rep(NA,length(nom_sample)*length(nombre_q))) #création d'un vecteur de taille nombre d'échantillons * nombre de valeurs de q
+# vecteur
 tableau <- data.frame(sample = vecteur, q = vecteur, Dq= vecteur) 
 tableau[1:5,"sample"] = rep(3,5)
-tableau
+# tableau
 
-for (a in 0:(length(nom_sample)-1)) {
-  tableau[(a*length(nom_sample)+1):(a*length(nom_sample)+5),"sample"] <-rep("non",5)
+# for (a in 0:(length(nom_sample)-1)) {
+#   tableau[(a*length(nombre_q)+1):((a+1)*length(nombre_q)),"sample"] <-rep(nom_sample[a+1],length(nombre_q))
+# }
+# tableau
+# est une idée pas trop mauvaise en théorie mais beaucoup trop lent
+
+
+# une autre solution proposée par sylvain, qui consiste à rajouter les lignes les unes après les autres
+
+nombre_q <- seq(1,2,1)
+df <- NULL
+for (ech in unique(data$sample) ) {
+  df <- rbind(df, data.frame(sample=ech,
+              q=nombre_q,
+              Qd=ifelse(nombre_q == 1,"oui","non")))
 }
-tableau
+df
+
+# sum(data$count == )
+```
+essai de faire fonctionner direct
+```{r}
+nombre_q <- seq(1,2,1)
+df <- NULL
+for (ech in unique(data$sample) ) {
+  somme=0
+  df <- rbind(df, data.frame(sample=ech,
+              q=nombre_q,
+              Qd=ifelse(nombre_q == 1,
+              for (g in data[data$sample == "~04A_1",]$count) {
+                ps=(g/(sum(data[data$sample == "~04A_1",]$count)))
+                somme = somme + ps*log(ps)
+                Hill <- exp(-somme)
+                print("a")
+              },
+              for (g in data[data$sample == "~04A_1",]$count) {
+                ps=(g/(sum(data[data$sample == "~04A_1",]$count)))
+                somme = somme + ps^q
+                Hill <- somme^(1/(1-nombre_q))
+                print("b")
+              })))
+}
+df
+```
+
+```{r}
+# somme <- 0
+# if (q==1) {
+#   for (e in 1:nrow(motus)) {
+#     somme <- somme + (motus$count[e]/sum(motus$count))*log(motus$count[e]/sum(motus$count))
+#   }
+#   Hill <- exp(-somme)
+#   print("a")
+# }else{
+#   for (e in 1:nrow(motus)) {
+#     somme <- somme + (motus$count[e]/sum(motus$count))^q
+#   }
+#   Hill <- somme^(1/(1-q))
+#   print("b")
+# }
+# print(Hill)
+```
+
+version que j'ai faite mais moins propre
+```{r}
+# sum(data[data$sample == "~04A_1",]$count) # correspond au nombre de lectures totales pour l'échantillon Z24W_3
+# nrow(data[data$sample == "~04A_1",])
+# 
+# 
+# q = 1
+# somme = 0
+# if (q == 1) {
+#   for (g in data[data$sample == "~04A_1",]$count) {
+#     ps=(g/(sum(data[data$sample == "~04A_1",]$count)))
+#     somme = somme + ps*log(ps)
+#     print("a")
+#   }
+#   Hill <- exp(-somme)
+# }else{
+#   for (g in data[data$sample == "~04A_1",]$count) {
+#     ps=(g/(sum(data[data$sample == "~04A_1",]$count)))
+#     somme = somme + ps^q
+#     print("b")
+#   }
+#   Hill <- somme^(1/(1-q))
+# }
+# print(Hill)
+```
+
+# version propre du if des valeurs du spèctre de Hill pour l'échantillon ~04A_1
+```{r}
+q = 
+somme = 0
+if (q == 1) {
+
+    ps=((data[data$sample == "~04A_1",]$count)/(sum(data[data$sample == "~04A_1",]$count)))
+    somme = sum(ps*log(ps))
+  Hill <- exp(-somme)
+}else{
+      ps=((data[data$sample == "~04A_1",]$count)/(sum(data[data$sample == "~04A_1",]$count)))
+    somme = sum(ps^q)
+    print("b")
+  Hill <- somme^(1/(1-q))
+}
+print(Hill)
+
 ```
 
 
@@ -451,6 +553,8 @@ tableau
 
 regrouper les échantillons en provenance d'une même espèce (espèce observée dans data) et observer la biodiv
 
+
+chercher si sequence connues ont des noms identiques à ceux proposés dans le NCBI blast
 
 
 
