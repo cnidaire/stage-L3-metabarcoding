@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Package à nécessaires
-```{r warning=FALSE}
+```{r message=FALSE}
 library(reshape)
 library(ROBITools2) #analyse des données métabarcoding
 library(ggplot2) #affichage graphique avancé
@@ -376,15 +376,71 @@ qplot(ps, main = "Histogramme de répartition ps séquences absentes fichier ré
 ### re-agréger les données de data_count  afin de vérifier si on obtient bien motus_count
 
 ```{r}
-data_count <- s # n() est une fonction de décompte
+data_count <- data%>%group_by(motu)%>%summarise(count = sum(count)) # n() est une fonction de décompte
 # donc il y a un problème car j'obtient le nombre de fois que le motu apparais dans data
 
 
 nrow(data_count)
 data_count
 
+nombre_f <- 0
 data_count$count == motus$count
+motus[ , "identique_data"] <- F
+for (c in 1:nrow(motus)) {
+  if (data_count$count[c] == motus$count[c]) {
+    motus$identique_data[c] <- T
+    
+  }else{
+    nombre_f <- nombre_f+1
+  }
+}
+print(f)
+```
 
+**motus agrégé (ça je ne me souviens plus de ce que je devais faire).**
+
+
+
+tracer l'évolution l'indicateur de biodiv en fonction de q échantillon par échantillon à partir du data
+
+
+```{r}
+# unique(data$sample)
+nombre_q <- seq(1,10,0.5)
+length(nombre_q)
+
+longueur <- rep(0,10)
+longueur
+# (length(nombre_q)*(data%>%group_by(sample)%>%summarise(sample= n())))
+```
+
+```{r}
+data%>%group_by(sample)%>%summarise(sample= n())
+
+
+vecteur1 <- c(1:10) ; vecteur2 <- c(2:11)
+
+tableau <- data.frame(x = vecteur1, y = vecteur2, z=vecteur2) 
+tableau
+matrice <- matrix(data = 0, nrow = nrow(motus), ncol = nrow(motus))
+nom_sample <- unique(data$sample)
+length(nom_sample)
+matrice
+```
+```{r}
+nombre_q <- seq(1,10,0.5)
+nom_sample <- unique(data$sample)
+length(nom_sample) # nombre d'échantillons différents
+vecteur <- c(rep(1,length(nom_sample)*length(nombre_q))) #création d'un vecteur de taille nombre d'échantillons * nombre de valeurs de q
+
+tableau <- data.frame(sample = vecteur, q = vecteur, Dq= vecteur) 
+tableau[1:5,"sample"] = rep(3,5)
+tableau
+
+for (a in 0:(length(nom_sample)-1)) {
+  tableau[(a*length(nom_sample)+1):(a*length(nom_sample)+5),"sample"] <-rep("non",5)
+}
+tableau
 ```
 
 
@@ -392,14 +448,6 @@ data_count$count == motus$count
 
 
 
-
-
-
-
-
-motus agrégé (ça je ne me souviens plus de ce que je devais faire).
-
-échantillon par échantillon à partir de data
 
 regrouper les échantillons en provenance d'une même espèce (espèce observée dans data) et observer la biodiv
 

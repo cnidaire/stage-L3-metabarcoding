@@ -18,3 +18,4 @@ Jusqu'à "étude de la distance entre les variants" dans [mon sujet](doc/stageL3
 
 - mise à jour du journal qui n'avais quasi pas été faite.
 - data%>%group_by(motu)%>%summarise(count = sum(count)) est une manière d'écrire super pratique et efficace
+- verification qu'il y a bien la meme nombre de lecture par motu dans le fichier data et dans le fichier motu
