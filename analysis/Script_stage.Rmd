@@ -9,7 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Package à nécessaires
+# 1) Importantion des packages necessaires et des données
+
 ```{r message=FALSE}
 library(reshape)
 library(ROBITools2) #analyse des données métabarcoding
@@ -20,7 +21,6 @@ library(stringr) #pour manipuler les chaînes de caractères
 library(openxlsx) #pour manipuler les fichiers .xlsx
 ```
 
-## Imporation des données
 ```{r}
 motus <- read.table("motus_afrique_sud_remi.txt")
 data <- read.table("data_afrique_sud_remi.txt")
@@ -30,7 +30,7 @@ reference <- read.xlsx("Plant reference collection sequence information.xlsx",
 ```
 
 
-# Prise en main et visualisation des données
+# 2) Prise en main et visualisation des données
 
 head donne les 6 premières lignes
 dim donne les dimensions
@@ -178,7 +178,7 @@ for (c in 1:nrow(motus)) {
 ```
 
 
-# Indicateur de biodiversité
+# 3) Indicateur de biodiversité
 
 ## Deffinition du nombre de HILL (diversité)
 
@@ -194,53 +194,34 @@ L’estimation de la diversité est difficile pour des ordres inférieurs à 0, 
 
 On décide d’analyser une famille d’indices : les nombres de Hill, qui correspondent à un nombre équivalent d’espèces présentes dans l’écosystème étudié.
 
+
+## Calcul du nombre de Hill pour une valeur de q fixée
+
+Quand on exécute pour q=0, on obtient bien 1011, ce qui correspond au nombre d'espèces étudiées.
+dans le cas où q=1, il y a une division par 0, il faut donc utiliser un dvp limité.
+
 ```{r}
-# q=1
-# sum(motus$count)
-# sum(motus$count[motus$dans_ref==T])
-
-# motus$count[e][motus$dans_ref == T]
-## j'aimerais bien écrire cela mais je n'arrive pas à extraire ce que je veux, il faut donc que je passe par un if
-
-
-# somme <- 0
-# for (e in 1:nrow(motus)) {
-#   if (motus$dans_ref[e] == TRUE){
-#     somme <- somme + (motus$count[e]/sum(motus$count[motus$dans_ref==T]))^q
-#   }
-# }
-# Hill <- somme^(1/(1-q))
-# print(Hill)
-# dans le cas où on ne veut étudier la diversité seulement sur les espèces répertoriées.
-
-
-
-
-q=0
+q=1
 somme <- 0
 if (q==1) {
   for (e in 1:nrow(motus)) {
     somme <- somme + (motus$count[e]/sum(motus$count))*log(motus$count[e]/sum(motus$count))
   }
   Hill <- exp(-somme)
-  print("a")
 }else{
   for (e in 1:nrow(motus)) {
     somme <- somme + (motus$count[e]/sum(motus$count))^q
   }
   Hill <- somme^(1/(1-q))
-  print("b")
 }
 print(Hill)
 # dans le cas où on veut étudier la diversité sur toutes les séquences
 ```
-quand on exécute pour q=0, on obtient bien 18, ce qui correspond au nombre d'espèces étudiées
-il reste le problème pour Q=0, il calcule -inf. il faut donc utiliser un dvp limité
 
+## Tracé du spèctre de Hill
 
-plotter la biodiversité en fonction de q
 ```{r}
-# réalisation d'une fonction que l'on pourra utiliser pour notre graphique
+# réalisation d'une fonction (contenant le code du dessus) que l'on pourra utiliser pour notre graphique.
 Biodiv <- function(q) {
   somme <- 0
   if (q==1) {
@@ -257,23 +238,20 @@ Biodiv <- function(q) {
     # print("b")
   }
 }
-x <- seq(0,3,0.1)
+x <- seq(0,3,0.1) # correspond au valeurs de q pour lesquelles je souhaite tracer le spèctre de Hill
 plot(x,sapply(x, Biodiv, simplify = TRUE, USE.NAMES = TRUE),main = "Évolution de l'indice de biodiversité en fonction de q", type = "l",xlab = "valeur de q", ylab = "log (indice de biodiversité)")
 # utilisation de sapply, nous permettant d'exécuter plusieurs fois la fonction avec des valeurs différentes 
-#passer echelle log
-# entre 0-3
 
-# Apprendre à faire le graphique sous GGplot pour qu'il soit plus propre
-```
-que se passe il quand q tend vers infini
-
-```{r}
 
 ```
+
+*ce serait bien d'apprendre à faire le graphique sous GGplot pour qu'il soit plus propre*
+
+*que se passe il quand q tend vers infini*
+
 
 ## Étude des Ps, de leurs répartition et de leurs répartition selon leurs présence ou non dans la base de données.
 
-tracer l'histogramme des log(ps) ainsi que ceux des log(ps) présents dans la référence et un autre avec ceux qui n'y sont pas
 
 ```{r}
 ps <- c()
@@ -285,7 +263,7 @@ for (f in 1:nrow(motus)) {
 qplot(ps, main = "Histogramme de répartition ps ADN séquencé")+scale_y_log10()+scale_x_log10()
 # dans le cas où on observe tout les ps
 ```
-On peut  observer que très peu d'espèces ont un ps supérieur à 10^-2, et sont donc extremement représenté dans le nombre de lectures alors que la plus part des espèces ontmoins de 10^-2.
+On peut  observer que très peu d'espèces ont un ps supérieur à 10^-2, et sont donc extremement représenté dans le nombre de lectures alors que la plus part des espèces ont moins de 10^-2.
 
 ```{r}
 ps <- c()
@@ -297,7 +275,7 @@ for (g in 1:nrow(motus)) {
 qplot(ps, main = "Histogramme de répartition ps espèces présentes dans fichier réference")
 # dans le cas où on observe juste ceux présents dans la base de données de référence
 ```
-Ici, on peut voir que la quasi totalité  des 
+
 
 ```{r}
 ps <- c()
@@ -312,16 +290,15 @@ qplot(ps, main = "Histogramme de répartition ps séquences absentes fichier ré
 *je pense qu'il sera dur de tirer des conclusions en comparant les différents graph étant donné que pour obtenir ps, on divise pas la somme des counts, qui n'est pas la même, ce sont donc deux infos mais difficilement comparables*
 
 
+# Verifier que la base de donnée Motus provient bien de data
 
-### re-agréger les données de data_count  afin de vérifier si on obtient bien motus_count
+re-agréger les données de data_count  afin de vérifier si on obtient bien motus_count
 
 ```{r}
-data_count <- data%>%group_by(motu)%>%summarise(count = sum(count)) # n() est une fonction de décompte
-# donc il y a un problème car j'obtient le nombre de fois que le motu apparais dans data
-
+data_count <- data%>%group_by(motu)%>%summarise(count = sum(count)) # n() est une fonction de décompte, permettant de compter le nombre d’occurrences alors que sum permet de sommer le nombre de count.
 
 nrow(data_count)
-data_count
+data_count # permet de re-aggreger les données de data
 
 nombre_f <- 0
 data_count$count == motus$count
@@ -334,11 +311,9 @@ for (c in 1:nrow(motus)) {
     nombre_f <- nombre_f+1
   }
 }
-print(f)
+#permet de remplir motus$identique_data en mettant TRUE si le nombre de count est identique.
+print(nombre_f)# permet de vérifier que toutes les séquences sont identiques.
 ```
-
-**motus agrégé (ça je ne me souviens plus de ce que je devais faire).**
-
 
 
 tracer l'évolution l'indicateur de biodiv en fonction de q échantillon par échantillon à partir du data
@@ -354,37 +329,31 @@ longueur
 # (length(nombre_q)*(data%>%group_by(sample)%>%summarise(sample= n())))
 ```
 
+je ne comprend pas ce que j'ai fait
+
 ```{r}
-data%>%group_by(sample)%>%summarise(sample= n())
-
-
-vecteur1 <- c(1:10) ; vecteur2 <- c(2:11)
-
-tableau <- data.frame(x = vecteur1, y = vecteur2, z=vecteur2) 
-tableau
-matrice <- matrix(data = 0, nrow = nrow(motus), ncol = nrow(motus))
-nom_sample <- unique(data$sample)
-length(nom_sample)
-matrice
+# data%>%group_by(sample)%>%summarise(sample= n())
+# 
+# 
+# vecteur1 <- c(1:10) ; vecteur2 <- c(2:11)
+# 
+# tableau <- data.frame(x = vecteur1, y = vecteur2, z=vecteur2) 
+# tableau
+# matrice <- matrix(data = 0, nrow = nrow(motus), ncol = nrow(motus))
+# nom_sample <- unique(data$sample)
+# length(nom_sample)
+# matrice
 ```
+
+
+
 ```{r}
 nombre_q <- seq(1,1,1)
 nom_sample <- unique(data$sample)
 length(nom_sample) # nombre d'échantillons différents
-vecteur <- c(rep(NA,length(nom_sample)*length(nombre_q))) #création d'un vecteur de taille nombre d'échantillons * nombre de valeurs de q
+vecteur <- c(rep(NA,length(nom_sample)*length(nombre_q))) #création d'un vecteur de taille=nombre d'échantillons * nombre de valeurs de q, initialisé avec NA
 # vecteur
-tableau <- data.frame(sample = vecteur, q = vecteur, Dq= vecteur) 
-tableau[1:5,"sample"] = rep(3,5)
-# tableau
 
-# for (a in 0:(length(nom_sample)-1)) {
-#   tableau[(a*length(nombre_q)+1):((a+1)*length(nombre_q)),"sample"] <-rep(nom_sample[a+1],length(nombre_q))
-# }
-# tableau
-# est une idée pas trop mauvaise en théorie mais beaucoup trop lent
-
-
-# une autre solution proposée par sylvain, qui consiste à rajouter les lignes les unes après les autres
 
 nombre_q <- seq(1,2,1)
 df <- NULL
