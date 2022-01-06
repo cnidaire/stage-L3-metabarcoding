@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Package à nécessaires
+## Package à nécessaires
 ```{r message=FALSE}
 library(reshape)
 library(ROBITools2) #analyse des données métabarcoding
@@ -38,71 +38,36 @@ memo: peuplier[c(3,7,9),c('Annee','Hauteur')]
 peuplier[peuplier$Age == x, ]
 peuplier[peuplier$Hauteur > 10,c('Diametre','Age','Hauteur')]
 
-
-
-```{r}
-# head(motus)
-# View(motus)
-# head(data)
-# dim(data)
-# head(samples)
-# head(reference)
-# dim(reference)
-
-sum(data[data$motu == "GH000001",]$count)  #   attention, ne fonctionne pas et je ne sais pas pourquoi
-```
-plus practique je pense
-```{r}
-# summary(motus)
-# summary(data)
-# summary(samples)
-# summary(reference)
-```
-
-ce que contiennent les jeux de données:
-  - motus: contient l'id, le nombre de lecture et la séquence
-  - data: contient le motu(=id), le numéro d'échantillon (plusieurs échantillons différents pour un même motu) et son nombre de lecture
-  - samples: contient chacune des séquences, l'espèce attendue, 
-  - reference: nom de l'espèce et la séquence de référence associée
-
-
-mini objectifs: 
-  - calculer le nombre de lecture par échantillon
-  - le nombre de variant par échantillon
-  - le nombre d'animaux différents
-
-### Nombre de lecture par échantillon
-
-c'est une donnée que l'on a déjà dans le fichier data, su nous voulons par motu, on l'a déjà dans le fichier motu mais il est possible de le faire manuellement comme sylvain l'a montré en faisant quelque chose ressemblant à  sum(data[data$motu == "GH000001"]). 
-
-mais cela ne fonctionne pas chez moi car je ne sais plus comment dire la colonne qu'il faut sommer
-
-il suffirait de le faire en boucle for allant de 1 à length(motu) (ce n'est pas length mais plutôt width mais cette commande n'existe pas) et pour chaque itération remplacer le motu recherché et ainsi faire le somme et ensuite ajouter le résultat dans une liste contenant en première colonne le nom de l'échantillon et en deuxième le nombre de lecture de cet échantilon.
-
 ```{r}
 # View(motus)
 # View(data)
 # View(samples)
 # View(reference)
 # pour avoir nombre colonne et de lignes de motus:
+```
+
+ce que contiennent les jeux de données:
+  - motus: contient l'id, le nombre de lecture et la séquence
+  - data: contient le motu(=id), le numéro d'échantillon (plusieurs échantillons différents     pour un même motu) et son nombre de lecture
+  - samples: contient chacune des séquences, l'espèce attendue, 
+  - reference: nom de l'espèce et la séquence de référence associée
+
+
+## Nombre de lecture par échantillon
+
+C'est une donnée que l'on a déjà dans le fichier data, si nous voulons par motu, on l'a déjà dans le fichier motus.
+
+
+Il suffirait de le faire en boucle for allant de 1 à length(motu) (ce n'est pas length mais plutôt width mais cette commande n'existe pas) et pour chaque itération remplacer le motu recherché et ainsi faire le somme et ensuite ajouter le résultat dans une liste contenant en première colonne le nom de l'échantillon et en deuxième le nombre de lecture de cet échantilon.
+
+```{r}
+
 length(motus)
 nrow(motus)
 ```
 
 
-### Nombre de variants par échantillons
-
-pour cela, il faut compter combien de d'échantillons différents ont le même motu dans le fichier data. on peut le faire avec une boucle for mais je pense qu'il y a moyen de faire plus simplement et proprement.
-
-```{r}
-# for (i in c(1,length(motus)) {
-#   
-# }
-
-```
-
-
-
+## Nombre de variants par échantillons
 
 ```{r}
 # nrow(samples)
@@ -114,72 +79,69 @@ for (i in c(1:nrow(samples))) {
     }
   }
 }
-table(samples$observed_scientific_name)
 print(compt)
-# samples$observed_scientific_name
-unique(samples$observed_scientific_name) # retire les noms d'espèces en doublons
+```
+
+Permet de compter le nombre de fois qu'apparaît Loxodonta africana. mais cette méthode est beaucoup trop lente pour pouvoir être appliquée à la base de donnée en entier.
+```{r}
+table(samples$observed_scientific_name)# permet le nombre d’occurrence de chacun des noms scientifiques dans la base de donnée sous forme de table
 
 samples%>%group_by(samples$observed_scientific_name)%>%summarise(echantillon = n()) # n() est une fonction de décompte
+# permet aussi de compter le nombre d’occurrences mais donne le résultat sous la forme d'un data frame.
 ```
 
-
+## Aprentissage de Robitools
 
 ```{r}
 
-lcs_score("AAAA","AAATAA", similarity_mode = "distance")$score
-lcs_score(motus[1,]$sequence, motus$sequence, similarity_mode = "distance")$score
+lcs_score("AAAA","AAATAA", similarity_mode = "distance")$score # permet de compter le nombre de différences entre deux séquences données.
+lcs_score(motus[1,]$sequence, motus$sequence, similarity_mode = "distance")$score # permet de comparer une séquence à toutes les autre du fichier.
 
 is_dist_1_or_0("AACAAGCC", c("AACAAGCC", "AAAAGCC", "ATCAAGCC", "AACATGCG"))
-
-
-
 ```
 
-Les 1 011 variants variants de la base de données ont été retenus sur un critère de similarité génétique. Etudie la distance entre chacun des variants. Représentation avec une heatmap. Comment interpréter ces proximités (ou non) entre les variants ?
+## Représentation des distances génétiques entre les variants à l'aide d'une Heatmap
+
+Les 1 011 variants variants de la base de données ont été retenus sur un critère de similarité génétique. Étudie la distance entre chacun des variants. Représentation avec une heatmap. Comment interpréter ces proximités (ou non) entre les variants ?
 
 ```{r}
-# for (a in c(1:nrow(motus))) {
-#   for (b in c(1:nrow(motus))) {
-#     matrice[a,b] <- lcs_score(motus$sequence[a],motus$sequence[b], similarity_mode = "distance")$score
-#   }
-# }
-
 matrice <- matrix(data = 0, nrow = nrow(motus), ncol = nrow(motus))
-# matrice
+# permet de créer une matrice aux dimension de motus
 
 for (a in 1:nrow(motus)) {
   matrice[a,] <-lcs_score(motus[a,]$sequence, motus$sequence, similarity_mode = "distance")$score
 }
+# rentre les scores des distance entre les séquences dans matrice
 
-# View(matrice)
-lineaire <- melt(matrice)# permet de transformer la matrice en une matrice plus longue avec sa localisation en x et y ainsi que sa valeur
+lineaire <- melt(matrice)# permet de transformer la matrice en une matrice plus longue avec sa localisation en x et y ainsi que sa valeur, ce qui va permettre de faire une heatmap avec ggplot
+
 colnames(lineaire) <- c("x", "y", "value")
-# print(lineaire)
 
 ggplot(lineaire, aes(x = x, y = y, fill = value))+
   geom_tile() +
-  coord_fixed()
+  coord_fixed() +
+  ggtitle("Heatmap des distances entres les séquence de Motus")
+
+# trace une heatmap
 ```
 
+Cette heatmap contenant trop de valeurs pour être lisible, nous l'avons réduite en ne gardant que les  premières séquences.
+De plus nous avons appliqué un log afin de mettre en valeur que un écart de 0 à 1 base est très important alors qu'un écart de 5 à 6 ne change pas grand chose.
 
 ```{r}
-matrice50 <- log(matrice[1:50,1:50])
-# matrice
+matrice50 <- matrice[1:50,1:50]
 
-lineaire <- melt(matrice50)# permet de transformer la matrice en une matrice plus longue avec sa localisation en x et y ainsi que sa valeur
+lineaire <- melt(matrice50)
 colnames(lineaire) <- c("x", "y", "value")
-# print(lineaire)
 
-ggplot(lineaire, aes(x = x, y = y, fill = value))+
+ggplot(lineaire, aes(x = x, y = y, fill = log(value)))+
   geom_tile() +
-  coord_fixed()
+  coord_fixed() + 
+  ggtitle("Heatmap des 50 premières séquences")
 
-# ggplot(lineaire, aes(x = x, y = y, fill = log(value)))+
-#   geom_tile() +
-#   coord_fixed()
-
-# motus$sequence[1]
 ```
+
+## Déterminer les espèces de motus appartenant à base de donnée de réference et annotation de Motus
 
 Une première difficulté est que certaines espèces (réelles) ont des séquences très proches les unes des autres. A partir de la base de référence fournie (Plant référence collection séquence information.xlsx ), peut-on distinguer des espèces réelles de probables erreurs PCR ? Annote la base de données "motus" avec l’espèce correspondante, quand elle est identifiée.
 
@@ -192,51 +154,29 @@ Une première difficulté est que certaines espèces (réelles) ont des séquenc
 #   motus$plant[c] <-lcs_score(motus[c,]$sequence, reference$Taxonomic.rank, similarity_mode = "distance")$score
 # }
 ## problème car ce que j'essaie d'implanter dans dans la colonne plant de motus n'a pas la même dimension que plant
-nombre_t <- 0
-motus[ , "dans_ref"] <- F
+```
+
+Essai de faire fonctionner avec deux boucles for imbriquées l'une dans l'autre, ce qui a fonctionné mais est trop lent.
+Il faut donc utiliser une seule boucle for comme écrit ci dessous.
+```{r}
+motus[ , "dans_ref"] <- F # créer une nouvelle colonne dans motus et l'initialiser avec des FALSE
 for (c in 1:nrow(motus)) {
   if (motus$sequence[c] %in% reference$Sequence.ID) {
     motus$dans_ref[c] <- T
-    nombre_t <- nombre_t+1
   }
-}
-# 
-# for (d in 1:nrow(reference)) {
-#     if(lcs_score(motus$sequence[1], reference$Sequence.ID[d], similarity_mode = "distance")$score == 0){
-#       motus$espece[1] = reference$Scientific.name[d]
-#     }
-# }
-nombre_identifie <- 0
+} 
+# chercher dans la base de données de référence et annoter TRUE quand cette séquence se trouve dans la base de référence. 
+
 motus[ , "espece"] <- NA
-# for (c in 1:nrow(motus)) {
-#   if (motus$dans_ref[c]) {
-#     for (d in 1:nrow(reference)) {
-#       if (lcs_score(motus$sequence[c], reference$Sequence.ID[d], similarity_mode = "distance")$score == 0) {
-#         motus$espece[c] <- reference$Scientific.name[d]
-#         nombre_identifie = nombre_identifie+1
-#       }
-#     }
-#   }
-# }
-## fonctionne mais lent
-nombre_identifie <- 0
+
 for (c in 1:nrow(motus)) {
   if (motus$dans_ref[c]) {
     motus$espece[c] <- reference$Scientific.name[reference$Sequence.ID == motus$sequence[c]]
-    nombre_identifie = nombre_identifie+1
   }
 }
-# attention, la façon d'écrire et beaucoup plus belle et efficace dans R que d'utiliser une boucle for comme laissé précédemment, à retenir.
-
-View(motus)
-# !is.na(motus$espece)
+# si il y a marqué TRUE dans la colonne "dans_ref", alors, il copie le nom de l'espèce qui a la même séquence.
 ```
-il faut donc vérifier si deux séquences sont similaires et si elles sont égales alors remplacer le 0 par le nom de l'espèce que l'on a trouvé.
-on ne put pas utiliser une deuxième boucle for, cela serait trop lent, il va donc falloir parcourir la base de données en utilisant robitools mais je ne suis pas sûr qu'en faisant cela, on puisse récupérer le nom de la séquence de réf correspondant.
-if lcs = 0 alors remplacer par le nom de l'espèce utilisée. avec deux boucle for, facile mais lent.
-si on utilise comparaison de séquence avec groupe de seq, on se retrouve avec une liste de distance mais je ne sais pas comment faire autrement qu'avec une boucle for pour récupérer l'info de si il y a une valeur de 0 présente.
 
-<!-- ajouter une colonne plante selon si la séquence est présente dans la base de données de référence -->
 
 # Indicateur de biodiversité
 
