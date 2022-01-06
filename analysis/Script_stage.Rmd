@@ -370,7 +370,7 @@ problème dans les valeurs affichées.
 il y a un problème dans la fonction pour essayer de trouver l'erreur, je vais refaire une autre fonction en utilisant if et else avec un sapply pour pouvoir implémenter dans la fonction les différentes valeurs de q au lieu du ifelse.
 
 ```{r}
-spectre_hill2 <- function(q,echantillon){
+spectre_hill <- function(q,echantillon){
   ps <- ((data[data$sample == echantillon,]$count)/(sum(data[data$sample == echantillon,]$count)))
   if (q == 1) {
     exp(-sum(ps*log(ps)))
@@ -378,13 +378,12 @@ spectre_hill2 <- function(q,echantillon){
       }
 }
 nombre_q <- seq(0,1,1)
-# q
-# ps
-sapply(nombre_q,spectre_hill2,"~04A_1")
+# ici, nous avons dû utiliser la fonction couplée avec un if et un esle au lieu d'un if else, ce qui fait qu'il ne peut rentrer dans la fonction qu'une seule valeur, pour pouvoir rentre un vecteur, il va falloir recourir à sapply.
+sapply(c(0,1),spectre_hill,"~04A_1") # exemple pour un echantillon random.
 ```
 
 
-### Version fusionnée
+### Edition d'un data frame de des valeurs du spectre de hill dans l'optique de le plotter par la suite
 
 ```{r}
 nombre_q <- seq(0,1,1)
@@ -392,14 +391,13 @@ nom_sample <- unique(data$sample)
 
 vecteur <- c(rep(NA,length(nom_sample)*length(nombre_q)))
 
-nombre_q <- seq(1,2,1)
 df <- NULL
-for (ech in unique(data$sample) ) {
+for (ech in unique(data$sample)[1:100] ) {
   df <- rbind(df, data.frame(sample=ech,
                              q=nombre_q,
-                             Qd=spectre_hill(nombre_q,ech)))
+                             Qd=sapply(nombre_q,spectre_hill,ech)))
 }
-df
+df # ici, j'ai choisi de le faire sur les 100 premier échantillons
 ```
 
 
