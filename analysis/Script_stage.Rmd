@@ -318,7 +318,7 @@ print(nombre_f)# permet de vérifier que toutes les séquences sont identiques.
 
 ## Tracer le spèctre de Hilldes différents échantillons à partir du data
 
-### créer un data frame contenant pour chaque échantillon leurs nom, les différentes valeurs de q et dans la colonne qd, si q == 1 alors marqué oui, sinon, non.
+### Créer un data frame contenant pour chaque échantillon leurs nom, les différentes valeurs de q et dans la colonne qd, si q == 1 alors marqué oui, sinon, non.
 
 ```{r}
 nombre_q <- seq(1,1,1)
@@ -337,7 +337,7 @@ df
 # j'ai mis oui et non pour vérifier à cette étape que tout fonctionne ben et que si q=1 alors oui est affiché, sinon, non est affiché
 ```
 
-### version propre du if des valeurs du spèctre de Hill pour l'échantillon ~04A_1
+### Version propre du if des valeurs du spèctre de Hill pour l'échantillon ~04A_1
 ```{r}
 q = 0
 somme = 0
@@ -357,17 +357,37 @@ print(Hill)
 ### Rédaction de la fonction pour le spectre de Hill
 
 ```{r}
-spectre_hill <- function(q,echantillon){
-  ps=((data[data$sample == echantillon,]$count)/(sum(data[data$sample == echantillon,]$count)))
-  ifelse (q == 1,exp(-sum(ps*log(ps))),sum(ps^q)^(1/(1-q)))
-}
-spectre_hill(nombre_q,"~04A_1")
+# spectre_hill <- function(q,echantillon){
+#   ps <- ((data[data$sample == echantillon,]$count)/(sum(data[data$sample == echantillon,]$count)))
+#   ifelse (q == 1,exp(-sum(ps*log(ps))),sum(ps^q)^(1/(1-q)))
+# }
+# # nombre_q <- seq(0,1,1)
+# # q
+# # ps
+# spectre_hill(c(0,1),"~04A_1")
 ```
-
-### version fusionnée
+problème dans les valeurs affichées.
+il y a un problème dans la fonction pour essayer de trouver l'erreur, je vais refaire une autre fonction en utilisant if et else avec un sapply pour pouvoir implémenter dans la fonction les différentes valeurs de q au lieu du ifelse.
 
 ```{r}
-nombre_q <- seq(1,2,1)
+spectre_hill2 <- function(q,echantillon){
+  ps <- ((data[data$sample == echantillon,]$count)/(sum(data[data$sample == echantillon,]$count)))
+  if (q == 1) {
+    exp(-sum(ps*log(ps)))
+    }else {sum(ps^q)^(1/(1-q))
+      }
+}
+nombre_q <- seq(0,1,1)
+# q
+# ps
+sapply(nombre_q,spectre_hill2,"~04A_1")
+```
+
+
+### Version fusionnée
+
+```{r}
+nombre_q <- seq(0,1,1)
 nom_sample <- unique(data$sample)
 
 vecteur <- c(rep(NA,length(nom_sample)*length(nombre_q)))
@@ -382,13 +402,16 @@ for (ech in unique(data$sample) ) {
 df
 ```
 
-semble fonctionner mais affiche: "Avis dans ps^q : la taille d'un objet plus long n'est pas multiple de la taille d'un objet plus court"
-
-Je ne comprends pas à quoi ela fait réference.
 
 
+# 4 ) Tracé du spectre de Hill pour les différentes espèces (le lien entre espèce et échantillon est dans le fichier samples). 
 
-regrouper les échantillons en provenance d'une même espèce (espèce observée dans data) et observer la biodiv
+
+
+<!-- regrouper les échantillons en provenance d'une même espèce (espèce observée dans data) et observer la biodiv -->
+ce que j'avai noté pour le point d'au dessus si besoin.
+
+
 
 
 chercher si sequence connues ont des noms identiques à ceux proposés dans le NCBI blast
