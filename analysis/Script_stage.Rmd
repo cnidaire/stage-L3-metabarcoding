@@ -319,6 +319,7 @@ print(nombre_f)# permet de vérifier que toutes les séquences sont identiques.
 ## Tracer le spèctre de Hilldes différents échantillons à partir du data
 
 ### créer un data frame contenant pour chaque échantillon leurs nom, les différentes valeurs de q et dans la colonne qd, si q == 1 alors marqué oui, sinon, non.
+
 ```{r}
 nombre_q <- seq(1,1,1)
 nom_sample <- unique(data$sample)
@@ -341,23 +342,49 @@ df
 q = 0
 somme = 0
 if (q == 1) {
-
     ps=((data[data$sample == "~04A_1",]$count)/(sum(data[data$sample == "~04A_1",]$count)))
     somme = sum(ps*log(ps))
-  Hill <- exp(-somme)
+    Hill <- exp(-somme)
 }else{
       ps=((data[data$sample == "~04A_1",]$count)/(sum(data[data$sample == "~04A_1",]$count)))
     somme = sum(ps^q)
-    print("b")
-  Hill <- somme^(1/(1-q))
+    Hill <- somme^(1/(1-q))
 }
 print(Hill)
 
 ```
 
+### Rédaction de la fonction pour le spectre de Hill
 
+```{r}
+spectre_hill <- function(q,echantillon){
+  ps=((data[data$sample == echantillon,]$count)/(sum(data[data$sample == echantillon,]$count)))
+  ifelse (q == 1,exp(-sum(ps*log(ps))),sum(ps^q)^(1/(1-q)))
+}
+spectre_hill(nombre_q,"~04A_1")
+```
 
+### version fusionnée
 
+```{r}
+nombre_q <- seq(1,2,1)
+nom_sample <- unique(data$sample)
+
+vecteur <- c(rep(NA,length(nom_sample)*length(nombre_q)))
+
+nombre_q <- seq(1,2,1)
+df <- NULL
+for (ech in unique(data$sample) ) {
+  df <- rbind(df, data.frame(sample=ech,
+                             q=nombre_q,
+                             Qd=spectre_hill(nombre_q,ech)))
+}
+df
+```
+
+semble fonctionner mais affiche: "Avis dans ps^q : la taille d'un objet plus long n'est pas multiple de la taille d'un objet plus court"
+
+Je ne comprends pas à quoi ela fait réference.
 
 
 
