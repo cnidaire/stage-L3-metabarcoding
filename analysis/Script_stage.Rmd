@@ -290,7 +290,7 @@ qplot(ps, main = "Histogramme de répartition ps séquences absentes fichier ré
 *je pense qu'il sera dur de tirer des conclusions en comparant les différents graph étant donné que pour obtenir ps, on divise pas la somme des counts, qui n'est pas la même, ce sont donc deux infos mais difficilement comparables*
 
 
-# Verifier que la base de donnée Motus provient bien de data
+## Verifier que la base de donnée Motus provient bien de data
 
 re-agréger les données de data_count  afin de vérifier si on obtient bien motus_count
 
@@ -316,44 +316,14 @@ print(nombre_f)# permet de vérifier que toutes les séquences sont identiques.
 ```
 
 
-tracer l'évolution l'indicateur de biodiv en fonction de q échantillon par échantillon à partir du data
+## Tracer le spèctre de Hilldes différents échantillons à partir du data
 
-
-```{r}
-# unique(data$sample)
-nombre_q <- seq(1,10,0.5)
-length(nombre_q)
-
-longueur <- rep(0,10)
-longueur
-# (length(nombre_q)*(data%>%group_by(sample)%>%summarise(sample= n())))
-```
-
-je ne comprend pas ce que j'ai fait
-
-```{r}
-# data%>%group_by(sample)%>%summarise(sample= n())
-# 
-# 
-# vecteur1 <- c(1:10) ; vecteur2 <- c(2:11)
-# 
-# tableau <- data.frame(x = vecteur1, y = vecteur2, z=vecteur2) 
-# tableau
-# matrice <- matrix(data = 0, nrow = nrow(motus), ncol = nrow(motus))
-# nom_sample <- unique(data$sample)
-# length(nom_sample)
-# matrice
-```
-
-
-
+### créer un data frame contenant pour chaque échantillon leurs nom, les différentes valeurs de q et dans la colonne qd, si q == 1 alors marqué oui, sinon, non.
 ```{r}
 nombre_q <- seq(1,1,1)
 nom_sample <- unique(data$sample)
-length(nom_sample) # nombre d'échantillons différents
+#length(nom_sample) # nombre d'échantillons différents
 vecteur <- c(rep(NA,length(nom_sample)*length(nombre_q))) #création d'un vecteur de taille=nombre d'échantillons * nombre de valeurs de q, initialisé avec NA
-# vecteur
-
 
 nombre_q <- seq(1,2,1)
 df <- NULL
@@ -363,81 +333,12 @@ for (ech in unique(data$sample) ) {
               Qd=ifelse(nombre_q == 1,"oui","non")))
 }
 df
-
-# sum(data$count == )
-```
-essai de faire fonctionner direct
-```{r}
-nombre_q <- seq(1,2,1)
-df <- NULL
-for (ech in unique(data$sample) ) {
-  somme=0
-  df <- rbind(df, data.frame(sample=ech,
-              q=nombre_q,
-              Qd=ifelse(nombre_q == 1,
-              for (g in data[data$sample == "~04A_1",]$count) {
-                ps=(g/(sum(data[data$sample == "~04A_1",]$count)))
-                somme = somme + ps*log(ps)
-                Hill <- exp(-somme)
-                print("a")
-              },
-              for (g in data[data$sample == "~04A_1",]$count) {
-                ps=(g/(sum(data[data$sample == "~04A_1",]$count)))
-                somme = somme + ps^q
-                Hill <- somme^(1/(1-nombre_q))
-                print("b")
-              })))
-}
-df
+# j'ai mis oui et non pour vérifier à cette étape que tout fonctionne ben et que si q=1 alors oui est affiché, sinon, non est affiché
 ```
 
+### version propre du if des valeurs du spèctre de Hill pour l'échantillon ~04A_1
 ```{r}
-# somme <- 0
-# if (q==1) {
-#   for (e in 1:nrow(motus)) {
-#     somme <- somme + (motus$count[e]/sum(motus$count))*log(motus$count[e]/sum(motus$count))
-#   }
-#   Hill <- exp(-somme)
-#   print("a")
-# }else{
-#   for (e in 1:nrow(motus)) {
-#     somme <- somme + (motus$count[e]/sum(motus$count))^q
-#   }
-#   Hill <- somme^(1/(1-q))
-#   print("b")
-# }
-# print(Hill)
-```
-
-version que j'ai faite mais moins propre
-```{r}
-# sum(data[data$sample == "~04A_1",]$count) # correspond au nombre de lectures totales pour l'échantillon Z24W_3
-# nrow(data[data$sample == "~04A_1",])
-# 
-# 
-# q = 1
-# somme = 0
-# if (q == 1) {
-#   for (g in data[data$sample == "~04A_1",]$count) {
-#     ps=(g/(sum(data[data$sample == "~04A_1",]$count)))
-#     somme = somme + ps*log(ps)
-#     print("a")
-#   }
-#   Hill <- exp(-somme)
-# }else{
-#   for (g in data[data$sample == "~04A_1",]$count) {
-#     ps=(g/(sum(data[data$sample == "~04A_1",]$count)))
-#     somme = somme + ps^q
-#     print("b")
-#   }
-#   Hill <- somme^(1/(1-q))
-# }
-# print(Hill)
-```
-
-# version propre du if des valeurs du spèctre de Hill pour l'échantillon ~04A_1
-```{r}
-q = 
+q = 0
 somme = 0
 if (q == 1) {
 
