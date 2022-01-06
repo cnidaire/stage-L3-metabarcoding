@@ -48,3 +48,4 @@ Jusqu'à "étude de la distance entre les variants" dans [mon sujet](doc/stageL3
 
 - un peu de tris dans le code car il devenait illisible, j'ai retiré tout les bouts de code inutiles, si besoin du cheminement de penssée, se réferrer au git d'avant le netoyage.
 - unique et class sont objets très pratiques
+- str() donne le type et ela tructure de l'objet

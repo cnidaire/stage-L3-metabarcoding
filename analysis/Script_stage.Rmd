@@ -374,8 +374,9 @@ spectre_hill <- function(q,echantillon){
   ps <- ((data[data$sample == echantillon,]$count)/(sum(data[data$sample == echantillon,]$count)))
   if (q == 1) {
     exp(-sum(ps*log(ps)))
-    }else {sum(ps^q)^(1/(1-q))
-      }
+  }else {
+    sum(ps^q)^(1/(1-q))
+  }
 }
 nombre_q <- seq(0,1,1)
 # ici, nous avons dû utiliser la fonction couplée avec un if et un esle au lieu d'un if else, ce qui fait qu'il ne peut rentrer dans la fonction qu'une seule valeur, pour pouvoir rentre un vecteur, il va falloir recourir à sapply.
@@ -386,21 +387,46 @@ sapply(c(0,1),spectre_hill,"~04A_1") # exemple pour un echantillon random.
 ### Edition d'un data frame de des valeurs du spectre de hill dans l'optique de le plotter par la suite
 
 ```{r}
-nombre_q <- seq(0,1,1)
+nombre_q <- seq(0,3,0.1)
 nom_sample <- unique(data$sample)
 
 vecteur <- c(rep(NA,length(nom_sample)*length(nombre_q)))
 
 df <- NULL
-for (ech in unique(data$sample)[1:100] ) {
+for (ech in unique(data$sample)[1:10] ) {
   df <- rbind(df, data.frame(sample=ech,
                              q=nombre_q,
                              Qd=sapply(nombre_q,spectre_hill,ech)))
 }
-df # ici, j'ai choisi de le faire sur les 100 premier échantillons
+df # ici, j'ai choisi de le faire sur les 10 premier échantillons
 ```
 
+### Tracer un graphique avec les premiers échantillons
 
+```{r}
+
+# dfacet <- data.frame(unique(df$sample),1:4)
+unique(df$sample)
+dfacet <- data.frame(sample = unique(df$sample), f = rep(1:4, floor(((length(unique(df$sample)))/4)+1)[1:length(unique(df$sample))]))
+
+# ne fonctionne pas
+
+df <- left_join(df,dfacet, by = sample)
+# essai de noter sur le dataframe des numéros qui nous permettrons par la suit de pouvoir fractionner en plusieurs graphiques à l'aide de facet_wrap
+
+# help("ggplot")
+Graph <- ggplot(data = df, aes(x = q, y = log10(Qd), colour = sample)) +
+  # On trace la ligne
+  geom_line() +
+  ggtitle("Spectre de Hill pour les premiers échantillons")
+# si on veut rajouter des points, il suffit de faire + geom_point(data = df, aes(x = q, y = Qd,colour = sample))
+Graph
+Graph + facet_wrap(facets = ~ (as.numeric(as.factor(sample))%%4))
+```
+
+*Si besoin de plus d'info pour tracer des graphs aller sur :"https://egallic.fr/pense-bete-r-1-deux-courbes-sur-un-graph/"*
+
+pour pouvoir afficher plusieurs graphs les uns à côté des autres, quelque chose existe, c'est peut être facet_grid/ facet wrap mais je ne suis pas sûr du tout
 
 # 4 ) Tracé du spectre de Hill pour les différentes espèces (le lien entre espèce et échantillon est dans le fichier samples). 
 
