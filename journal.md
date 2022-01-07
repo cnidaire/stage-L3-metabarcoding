@@ -53,4 +53,7 @@ Jusqu'à "étude de la distance entre les variants" dans [mon sujet](doc/stageL3
 # vendredi 6 janvier
 
 - centrer les titres
-- tracé des graphs avec le nombre de de variants et de lectures par echantillons
+- tracé des graphs avec le nombre de de variants et de lectures par échantillons
+- mise en place d'une table des matières flottante dans Html pour avoir un deuxième écran dans lequel je puisse naviguer facilement
+- début du calcul d'une matrice de distance et de proba d'appartenance à une espèce ou non.
+- ébauche d'un digramme décisionnel pour savoir que faire afin de calculer les probas qu'un motus appartienne à un autre motu

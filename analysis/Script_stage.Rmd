@@ -2,14 +2,20 @@
 title: "Script_stage"
 author: "Rémi Legrand"
 date: "03/01/2022"
-output: html_document
+output: 
+  html_document :
+    toc: true # table of content true
+    toc_float: True
+    toc_depth: 3  # upto three depths of headings (specified by #, ## and ###)
+    number_sections: true  ## if you want number sections at each table header
+    theme: united  # many options for theme, this one is my favorite.
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# 1) Importantion des packages necessaires et des données
+# Importation des packages nécessaires et des données
 
 ```{r message=FALSE, warning=FALSE}
 library(reshape)
@@ -30,7 +36,7 @@ reference <- read.xlsx("Plant reference collection sequence information.xlsx",
 ```
 
 
-# 2) Prise en main et visualisation des données
+# Prise en main et visualisation des données
 
 head donne les 6 premières lignes
 dim donne les dimensions
@@ -178,7 +184,7 @@ for (c in 1:nrow(motus)) {
 ```
 
 
-# 3) Indicateur de biodiversité
+# Indicateur de biodiversité
 
 ## Deffinition du nombre de HILL (diversité)
 
@@ -411,7 +417,7 @@ Graph + facet_wrap(facets = ~ (as.numeric(as.factor(sample))%%4))
 
 *Si besoin de plus d'info pour tracer des graphs aller sur :"https://egallic.fr/pense-bete-r-1-deux-courbes-sur-un-graph/"*
 
-### Histogramme du nombre de lecture par echantillon
+## Histogramme du nombre de lecture par echantillon
 
 ```{r}
 qplot(data$count, main = "Nombre de lectures par échantillons") +
@@ -422,7 +428,7 @@ qplot(data$count, main = "Nombre de lectures par échantillons") +
   ylab("log (nombre de lectures)")
 ```
 
-### Nombre de motu par échantillon
+## Nombre de motu par échantillon
 
 
 ```{r}
@@ -440,7 +446,7 @@ qplot(a$motu, main = "Nombre de variants par échantillons") +
 ```
 
 
-# 4 ) Tracé du spectre de Hill pour les différentes espèces (le lien entre espèce et échantillon est dans le fichier samples). 
+# Tracer le spectre de Hill pour les différentes espèces (le lien entre espèce et échantillon est dans le fichier samples). 
 
 
 
@@ -448,9 +454,29 @@ qplot(a$motu, main = "Nombre de variants par échantillons") +
 ce que j'avai noté pour le point d'au dessus si besoin.
 
 
+# Probabilité de dérivation d'un autre variant
+
+```{r}
+matrice1 <- matrice <- matrix(data = 0, nrow = 10, ncol = 10)
+for (a in 1:10) {
+ matrice1[a,] <- lcs_score(motus[a,]$sequence,motus[1:10,]$sequence, similarity_mode = "distance")$score 
+}
+matrice1
+```
+
+manière décrire uniquement fonctionnelle
+
+```{r}
+x <- sapply(motus$sequence[1:10], lcs_score, motus$sequence[1:10], similarity_mode = "distance")
+matrice_distance <- matrix(unlist(x), nrow = length(motus$sequence[1:10]), ncol = length(motus$sequence[1:10]), byrow = T)
+
+matrice_distance
+```
 
 
-chercher si sequence connues ont des noms identiques à ceux proposés dans le NCBI blast
+
+
+
 
 
 
