@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # 1) Importantion des packages necessaires et des données
 
-```{r message=FALSE}
+```{r message=FALSE, warning=FALSE}
 library(reshape)
 library(ROBITools2) #analyse des données métabarcoding
 library(ggplot2) #affichage graphique avancé
@@ -260,7 +260,8 @@ for (f in 1:nrow(motus)) {
   ps <- c(ps,motus$count[f]/sum(motus$count))
   
 }
-qplot(ps, main = "Histogramme de répartition ps ADN séquencé")+scale_y_log10()+scale_x_log10()
+qplot(ps, main = "Histogramme de répartition ps ADN séquencé")+scale_y_log10()+scale_x_log10()+ 
+theme(plot.title = element_text(hjust = 0.5))
 # dans le cas où on observe tout les ps
 ```
 On peut  observer que très peu d'espèces ont un ps supérieur à 10^-2, et sont donc extremement représenté dans le nombre de lectures alors que la plus part des espèces ont moins de 10^-2.
@@ -272,7 +273,8 @@ for (g in 1:nrow(motus)) {
     ps <- c(ps,motus$count[g]/sum(motus$count[motus$dans_ref==T]))
   }
 }
-qplot(ps, main = "Histogramme de répartition ps espèces présentes dans fichier réference")
+qplot(ps, main = "Histogramme de répartition ps espèces présentes dans fichier réference")+ 
+theme(plot.title = element_text(hjust = 0.5))
 # dans le cas où on observe juste ceux présents dans la base de données de référence
 ```
 
@@ -284,7 +286,8 @@ for (h in 1:nrow(motus)) {
     ps <- c(ps,motus$count[h]/sum(motus$count[motus$dans_ref==F]))
   }
 }
-qplot(ps, main = "Histogramme de répartition ps séquences absentes fichier réference")+scale_y_log10()+scale_x_log10()
+qplot(ps, main = "Histogramme de répartition ps séquences absentes fichier réference")+scale_y_log10()+scale_x_log10()+ 
+theme(plot.title = element_text(hjust = 0.5))
 # dans le cas où on observe juste ceux non présents dans la base de données de référence
 ```
 *je pense qu'il sera dur de tirer des conclusions en comparant les différents graph étant donné que pour obtenir ps, on divise pas la somme des counts, qui n'est pas la même, ce sont donc deux infos mais difficilement comparables*
@@ -298,10 +301,10 @@ re-agréger les données de data_count  afin de vérifier si on obtient bien mot
 data_count <- data%>%group_by(motu)%>%summarise(count = sum(count)) # n() est une fonction de décompte, permettant de compter le nombre d’occurrences alors que sum permet de sommer le nombre de count.
 
 nrow(data_count)
-data_count # permet de re-aggreger les données de data
+head(data_count) # permet de re-aggreger les données de data
 
 nombre_f <- 0
-data_count$count == motus$count
+# data_count$count == motus$count
 motus[ , "identique_data"] <- F
 for (c in 1:nrow(motus)) {
   if (data_count$count[c] == motus$count[c]) {
@@ -333,7 +336,7 @@ for (ech in unique(data$sample) ) {
               q=nombre_q,
               Qd=ifelse(nombre_q == 1,"oui","non")))
 }
-df
+head(df)
 # j'ai mis oui et non pour vérifier à cette étape que tout fonctionne ben et que si q=1 alors oui est affiché, sinon, non est affiché
 ```
 
@@ -356,18 +359,7 @@ print(Hill)
 
 ### Rédaction de la fonction pour le spectre de Hill
 
-```{r}
-# spectre_hill <- function(q,echantillon){
-#   ps <- ((data[data$sample == echantillon,]$count)/(sum(data[data$sample == echantillon,]$count)))
-#   ifelse (q == 1,exp(-sum(ps*log(ps))),sum(ps^q)^(1/(1-q)))
-# }
-# # nombre_q <- seq(0,1,1)
-# # q
-# # ps
-# spectre_hill(c(0,1),"~04A_1")
-```
-problème dans les valeurs affichées.
-il y a un problème dans la fonction pour essayer de trouver l'erreur, je vais refaire une autre fonction en utilisant if et else avec un sapply pour pouvoir implémenter dans la fonction les différentes valeurs de q au lieu du ifelse.
+il y a eu un problème dans la fonction, j'ai dû refaire une autre fonction en utilisant if et else avec un sapply pour pouvoir implémenter dans la fonction les différentes valeurs de q au lieu du ifelse.
 
 ```{r}
 spectre_hill <- function(q,echantillon){
@@ -393,40 +385,60 @@ nom_sample <- unique(data$sample)
 vecteur <- c(rep(NA,length(nom_sample)*length(nombre_q)))
 
 df <- NULL
-for (ech in unique(data$sample)[1:10] ) {
+for (ech in unique(data$sample)[1:40] ) {
   df <- rbind(df, data.frame(sample=ech,
                              q=nombre_q,
                              Qd=sapply(nombre_q,spectre_hill,ech)))
 }
-df # ici, j'ai choisi de le faire sur les 10 premier échantillons
+head(df) # ici, j'ai choisi de le faire sur les 10 premier échantillons
 ```
 
 ### Tracer un graphique avec les premiers échantillons
 
 ```{r}
-
-# dfacet <- data.frame(unique(df$sample),1:4)
-unique(df$sample)
-dfacet <- data.frame(sample = unique(df$sample), f = rep(1:4, floor(((length(unique(df$sample)))/4)+1)[1:length(unique(df$sample))]))
-
-# ne fonctionne pas
-
-df <- left_join(df,dfacet, by = sample)
-# essai de noter sur le dataframe des numéros qui nous permettrons par la suit de pouvoir fractionner en plusieurs graphiques à l'aide de facet_wrap
-
 # help("ggplot")
 Graph <- ggplot(data = df, aes(x = q, y = log10(Qd), colour = sample)) +
   # On trace la ligne
   geom_line() +
-  ggtitle("Spectre de Hill pour les premiers échantillons")
+  ggtitle("Spectre de Hill pour les premiers échantillons") + 
+  theme(legend.position = "none")+ 
+  theme(plot.title = element_text(hjust = 0.5)) # permet de centre le titre, si on veut faire des retours à la ligne dans les titres, il fait inserer des \n
+
 # si on veut rajouter des points, il suffit de faire + geom_point(data = df, aes(x = q, y = Qd,colour = sample))
-Graph
+# Graph
 Graph + facet_wrap(facets = ~ (as.numeric(as.factor(sample))%%4))
 ```
 
 *Si besoin de plus d'info pour tracer des graphs aller sur :"https://egallic.fr/pense-bete-r-1-deux-courbes-sur-un-graph/"*
 
-pour pouvoir afficher plusieurs graphs les uns à côté des autres, quelque chose existe, c'est peut être facet_grid/ facet wrap mais je ne suis pas sûr du tout
+### Histogramme du nombre de lecture par echantillon
+
+```{r}
+qplot(data$count, main = "Nombre de lectures par échantillons") +
+  scale_y_log10() + 
+  scale_x_log10() + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  xlab("Échantillon") +
+  ylab("log (nombre de lectures)")
+```
+
+### Nombre de motu par échantillon
+
+
+```{r}
+
+a <- data %>% group_by(sample) %>% summarise(motu=n())
+a
+str(a)
+qplot(a$motu, main = "Nombre de variants par échantillons") +
+  scale_y_log10() + 
+  scale_x_log10() + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  xlab("Échantillon") +
+  ylab("log (nombre de variants)")
+
+```
+
 
 # 4 ) Tracé du spectre de Hill pour les différentes espèces (le lien entre espèce et échantillon est dans le fichier samples). 
 
