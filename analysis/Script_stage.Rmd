@@ -25,6 +25,7 @@ library(dplyr) #pour manipuler les données
 library(tidyr) #idem
 library(stringr) #pour manipuler les chaînes de caractères
 library(openxlsx) #pour manipuler les fichiers .xlsx
+library(igraph)
 ```
 
 ```{r}
@@ -472,7 +473,7 @@ manière décrire uniquement fonctionnelle
 x <- sapply(motus$sequence[1:nrow(motus)], lcs_score, motus$sequence[1:nrow(motus)], similarity_mode = "distance")
 matrice_distance <- matrix(unlist(x), nrow = length(motus$sequence[1:nrow(motus)]), ncol = length(motus$sequence[1:nrow(motus)]), byrow = T)
 
-matrice_distance
+# matrice_distance
 ```
 ## Traiter de façon adéquate les séquence appartenant à la base de données de ref.
 
@@ -571,10 +572,41 @@ for (i in 1:nrow(motus)) {
   }
   # print(sum(matrice_proba[i,]))
 }
-View(matrice_proba)
+View(matrice_proba[1:50,1:50])
 ```
 
+construction d'une matrice d'adjacence sur le même principe
 
+```{r}
+matrice_adj <- matrix(data = NA, nrow = nrow(motus), ncol = nrow(motus))
+# matrice_proba[1,] <- 0
+for (i in 1:nrow(motus)) {
+  if (motus$dans_ref[i] == T) {
+    matrice_adj[i,] <- 0 # n'est lié à rien d'autre
+  }else {
+    if (1 %in% matrice_distance[i,1:(i-1)]) {
+      a <- which(matrice_distance[i,1:(i-1)] == 1)
+      # print(length(a))
+      if (length(a) == 1) {
+        matrice_adj[i,] <- 0
+        matrice_adj[i,a] <- 1 # se rattache à cette espèce
+      }else {
+        matrice_adj[i,] <- 0
+        matrice_adj[i,a] <- 1 # lié aux deux mais perte de l'info de la répartition entre les deux
+      }
+    }else{
+      matrice_adj[i,] <- 0 # définition d'une probable nouvelle espèce
+    }
+  }
+}
+
+
+plot(graph_from_adjacency_matrix(matrice_adj[1:100,1:100], mode='undirected'))
+```
+
+```{r}
+?igraph.plotting
+```
 
 
 
