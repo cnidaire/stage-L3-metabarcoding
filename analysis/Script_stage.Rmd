@@ -600,8 +600,9 @@ for (i in 1:nrow(motus)) {
   }
 }
 
-
-plot(graph_from_adjacency_matrix(matrice_adj[1:100,1:100], mode='undirected'))
+graph_liens <- graph_from_adjacency_matrix(matrice_adj[1:nrow(motus),1:nrow(motus)])
+V(graph_liens)$color <- "grey"
+tkplot(graph_liens, mode='directed')
 ```
 
 ```{r}
