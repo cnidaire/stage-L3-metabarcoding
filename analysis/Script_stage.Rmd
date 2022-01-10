@@ -464,13 +464,13 @@ for (a in 1:10) {
 matrice1
 ```
 
-# Matrice de proba
+# Matrice de proba en ne regardant qu'à une distance de 1 max
 
 manière décrire uniquement fonctionnelle
 
 ```{r}
-x <- sapply(motus$sequence[1:15], lcs_score, motus$sequence[1:15], similarity_mode = "distance")
-matrice_distance <- matrix(unlist(x), nrow = length(motus$sequence[1:15]), ncol = length(motus$sequence[1:15]), byrow = T)
+x <- sapply(motus$sequence[1:nrow(motus)], lcs_score, motus$sequence[1:nrow(motus)], similarity_mode = "distance")
+matrice_distance <- matrix(unlist(x), nrow = length(motus$sequence[1:nrow(motus)]), ncol = length(motus$sequence[1:nrow(motus)]), byrow = T)
 
 matrice_distance
 ```
@@ -512,26 +512,67 @@ matrice_proba
 
 Maintenant, au cas où il y a soit plusieurs séquences avec plus de reads à 1 de distance ou au contraire aucune.
 
+
+problème ligne 28, la probabilité d’attribution de la ligne 28 est de 0
 ```{r}
 matrice_proba <- matrice_distance
 # matrice_proba[1,] <- 0
-for (i in 1:15) {
+for (i in 1:nrow(motus)) {
   if (motus$dans_ref[i] == T) {
     matrice_proba[i,] <- 0
     matrice_proba[i,i] <- 1
   }else {
-    if (1 %in% matrice_proba[i,]) {
-      a <- print(which(matrice_proba[i,1:(i-1)] == 1))
+    if (1 %in% matrice_proba[i,1:(i-1)]) {
+      a <- which(matrice_proba[i,1:(i-1)] == 1)
+      # print(length(a))
+      if (length(a) == 1) {
+        matrice_proba[i,] <- 0
+        matrice_proba[i,a] <- 1 # se rattache à cette espèce
+      }else {
+        matrice_proba[i,] <- 0
+        matrice_proba[i,a] <- (motus$count[a]/sum(motus$count[a])) # proba répartie
+      }
+    }else{
       matrice_proba[i,] <- 0
-       matrice_proba[i,a] <- 1
+      matrice_proba[i,i] <- 1 # définition d'une probable nouvelle espèce
     }
   }
-  
+  # print(sum(matrice_proba[i,]))
 }
 matrice_proba
 ```
 
 
+
+## Séparation nette entre la matrice de distance et la matrice de proba 
+
+```{r}
+matrice_proba <- matrix(data = NA, nrow = nrow(motus), ncol = nrow(motus))
+# matrice_proba[1,] <- 0
+for (i in 1:nrow(motus)) {
+  if (motus$dans_ref[i] == T) {
+    matrice_proba[i,] <- 0
+    matrice_proba[i,i] <- 1
+  }else {
+    if (1 %in% matrice_distance[i,1:(i-1)]) {
+      a <- which(matrice_distance[i,1:(i-1)] == 1)
+      # print(length(a))
+      if (length(a) == 1) {
+        matrice_proba[i,] <- 0
+        matrice_proba[i,a] <- 1 # se rattache à cette espèce
+      }else {
+        matrice_proba[i,] <- 0
+        matrice_proba[i,a] <- (motus$count[a]/sum(motus$count[a])) # proba répartie
+      }
+    }else{
+      matrice_proba[i,] <- 0
+      matrice_proba[i,i] <- 1 # définition d'une probable nouvelle espèce
+    }
+  }
+  # print(sum(matrice_proba[i,]))
+}
+View(matrice_proba)
+```
 
 
 
