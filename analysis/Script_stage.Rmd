@@ -464,14 +464,77 @@ for (a in 1:10) {
 matrice1
 ```
 
+# Matrice de proba
+
 manière décrire uniquement fonctionnelle
 
 ```{r}
-x <- sapply(motus$sequence[1:10], lcs_score, motus$sequence[1:10], similarity_mode = "distance")
-matrice_distance <- matrix(unlist(x), nrow = length(motus$sequence[1:10]), ncol = length(motus$sequence[1:10]), byrow = T)
+x <- sapply(motus$sequence[1:15], lcs_score, motus$sequence[1:15], similarity_mode = "distance")
+matrice_distance <- matrix(unlist(x), nrow = length(motus$sequence[1:15]), ncol = length(motus$sequence[1:15]), byrow = T)
 
 matrice_distance
 ```
+## Traiter de façon adéquate les séquence appartenant à la base de données de ref.
+
+Si les séquences sont dans la ref alors, ce sont de vraies espèces et la probabilité qu'elles appartiennent à elle même est donc de 1 et celle d'appartenir à n'importe laquelle des autres est de 0.
+
+```{r}
+matrice_proba <- matrice_distance
+# matrice_proba[1,] <- 0
+for (i in 1:15) {
+  if (motus$dans_ref[i] == T) {
+    matrice_proba[i,] <- 0
+    matrice_proba[i,i] <- 1
+  }
+}
+matrice_proba
+```
+Si une séquence non attribuée se trouve à 1 de distance de la séquence étudiée, et avant cette séquence dans l'ordre, alors, il est très probable qu'elle ne soit qu'un mutant de cette dernière. Mais là, il n'y a pas de proba associée.
+
+```{r}
+matrice_proba <- matrice_distance
+# matrice_proba[1,] <- 0
+for (i in 1:15) {
+  if (motus$dans_ref[i] == T) {
+    matrice_proba[i,] <- 0
+    matrice_proba[i,i] <- 1
+  }else {
+    if (1 %in% matrice_proba[i,]) {
+      a <- print(which(matrice_proba[i,1:(i-1)] == 1))
+      matrice_proba[i,] <- 0
+       matrice_proba[i,a] <- 1
+    }
+  }
+  
+}
+matrice_proba
+```
+
+Maintenant, au cas où il y a soit plusieurs séquences avec plus de reads à 1 de distance ou au contraire aucune.
+
+```{r}
+matrice_proba <- matrice_distance
+# matrice_proba[1,] <- 0
+for (i in 1:15) {
+  if (motus$dans_ref[i] == T) {
+    matrice_proba[i,] <- 0
+    matrice_proba[i,i] <- 1
+  }else {
+    if (1 %in% matrice_proba[i,]) {
+      a <- print(which(matrice_proba[i,1:(i-1)] == 1))
+      matrice_proba[i,] <- 0
+       matrice_proba[i,a] <- 1
+    }
+  }
+  
+}
+matrice_proba
+```
+
+
+
+
+
 
 
 
