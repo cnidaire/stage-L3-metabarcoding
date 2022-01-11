@@ -488,7 +488,7 @@ for (i in 1:15) {
     matrice_proba[i,i] <- 1
   }
 }
-matrice_proba
+# matrice_proba
 ```
 Si une séquence non attribuée se trouve à 1 de distance de la séquence étudiée, et avant cette séquence dans l'ordre, alors, il est très probable qu'elle ne soit qu'un mutant de cette dernière. Mais là, il n'y a pas de proba associée.
 
@@ -508,7 +508,7 @@ for (i in 1:15) {
   }
   
 }
-matrice_proba
+# matrice_proba
 ```
 
 Maintenant, au cas où il y a soit plusieurs séquences avec plus de reads à 1 de distance ou au contraire aucune.
@@ -540,7 +540,7 @@ for (i in 1:nrow(motus)) {
   }
   # print(sum(matrice_proba[i,]))
 }
-matrice_proba
+# matrice_proba
 ```
 
 
@@ -575,7 +575,7 @@ for (i in 1:nrow(motus)) {
 View(matrice_proba[1:50,1:50])
 ```
 
-construction d'une matrice d'adjacence sur le même principe
+## Construction d'une matrice d'adjacence sur le même principe et tracé d'un premier graph
 
 ```{r}
 matrice_adj <- matrix(data = NA, nrow = nrow(motus), ncol = nrow(motus))
@@ -602,14 +602,45 @@ for (i in 1:nrow(motus)) {
 
 graph_liens <- graph_from_adjacency_matrix(matrice_adj[1:nrow(motus),1:nrow(motus)])
 V(graph_liens)$color <- "grey"
+# E(graph_liens)$size <- c(10)
+# tkplot(graph_liens, mode='directed')
+```
+
+## Customization du graph, ajout colonne dans ref ou nom, d'une colonne count et du coup.
+
+```{r}
+df_graph <- NULL
+df_graph <- rbind(df_graph, data.frame(adj = matrice_adj, ds_ref = motus$dans_ref, count = motus$count))
+View(df_graph)
+
+couleur <- NULL
+for (i in 1:nrow(motus)) {
+  if (motus$dans_ref[i] == T) {
+    couleur <- rbind(couleur, "green")# apparaît dans la base de données de ref
+  }else {
+    couleur <- rbind(couleur, "yellow")# absent de la base de données
+  }
+}
+
+taille_vertex <- 3*log10(motus$count)
+
+length(couleur)
+
+graph_liens <- graph_from_adjacency_matrix(as.matrix(df_graph[1:nrow(motus),1:nrow(motus)]),add.colnames = NA)
+V(graph_liens)$color <- couleur
+V(graph_liens)$size <- taille_vertex
+# V(graph_liens)$color[,ds_ref == T] <- "red"
 tkplot(graph_liens, mode='directed')
+
 ```
 
 ```{r}
 ?igraph.plotting
+
+
 ```
 
-
+rajouter une nouvelle couleur pour les espèces déduites
 
 
 

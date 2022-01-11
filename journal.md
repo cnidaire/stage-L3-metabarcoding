@@ -61,3 +61,6 @@ Jusqu'à "étude de la distance entre les variants" dans [mon sujet](doc/stageL3
 # Lundi 10 janvier
 
 - rédaction du code pour obtenir une matrice de proba
+- apprentissage de igrah qui permet de réaliser des graphs et tracé des premier graphs
+
+# Mardi 11 janvier
