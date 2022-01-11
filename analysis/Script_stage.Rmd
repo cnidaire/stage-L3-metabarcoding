@@ -546,7 +546,7 @@ V(graph_liens)$size <- taille_vertex
 # E(graph_liens)$size <- c(10)
 # V(graph_liens)$color[,ds_ref == T] <- "red"
 
-# tkplot(graph_liens, mode='directed')
+tkplot(graph_liens, mode='directed')
 ```
 vert si espèce définie dans la base de données de ref
 rouge si espèce nouvellement définie (ici, il n''y en a aucune)
@@ -579,6 +579,8 @@ count_espece[count_espece$count_estime != 0,] # pour n'avoir que les motus avec 
 View(count_espece)
 ```
 
+## création data frame pour le spectre de Hill théorique
+ 
 ```{r}
 spectre_hill <- function(q,base_de_donnee){
   ps <- ((base_de_donnee)/(sum(base_de_donnee)))# calcule tout les ps de la base de donnée demandée
@@ -588,32 +590,31 @@ spectre_hill <- function(q,base_de_donnee){
     sum(ps^q)^(1/(1-q))
   }
 }
-nombre_q <- seq(0,3,0.1)
+nombre_q <- seq(0,5,0.1)
 
 
 # sapply(nombre_q,spectre_hill,count_espece[count_espece$count_estime != 0,]$count_estime)
 
-hill_estimation <- data.frame(q=nombre_q, Qd=sapply(nombre_q,spectre_hill, count_espece[count_espece$count_estime != 0,]$count_estime))
+comparaison_spectre_hill <- data.frame(provenance = "estimation", q=nombre_q, Qd=sapply(nombre_q,spectre_hill, count_espece[count_espece$count_estime != 0,]$count_estime))
 
-hill_estimation
+comparaison_spectre_hill
+
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, data.frame(provenance = "donnees brut",q=nombre_q, Qd=sapply(nombre_q,spectre_hill, motus$count)))
+
+comparaison_spectre_hill
 ```
 
 
 ```{r}
-Graph <- ggplot(data = hill_estimation, aes(x = q, y = log10(Qd))) +
+ggplot(data = comparaison_spectre_hill, aes(x = q, y = log10(Qd), colour= provenance)) +
   # On trace la ligne
   geom_line() +
   ggtitle("Estimation du spectre de Hill") +
-  theme(plot.title = element_text(hjust = 0.5))
-Graph
+  theme_bw()
 ```
 
 
 
-```{r}
-ps <- ((count_espece[count_espece$count_estime != 0,]$count_estime)/ (sum(count_espece[count_espece$count_estime != 0,]$count_estime)))
-ps
-```
 
 
 
