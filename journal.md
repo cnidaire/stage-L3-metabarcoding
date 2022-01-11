@@ -64,3 +64,6 @@ Jusqu'à "étude de la distance entre les variants" dans [mon sujet](doc/stageL3
 - apprentissage de igrah qui permet de réaliser des graphs et tracé des premier graphs
 
 # Mardi 11 janvier
+
+- ajout d'une couleur différente pour les espèces nouvellement définies. cependant, il semblerait qu'il n'y en ai pas alors que la définition d'une nouvelle espèce est très large dans le cas où on ne la définit que en étant la plus lue à un de distance.
+- mise en place d'un programme permettant de compter le nomre de count théoriques pour chaque espèce.

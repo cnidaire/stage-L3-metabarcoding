@@ -475,7 +475,6 @@ matrice_distance <- matrix(unlist(x), nrow = length(motus$sequence[1:nrow(motus)
 
 # matrice_distance
 ```
-## Traiter de façon adéquate les séquence appartenant à la base de données de ref.
 
 ## construction matrice proba d'appartenance
 
@@ -546,8 +545,8 @@ V(graph_liens)$color <- couleur
 V(graph_liens)$size <- taille_vertex
 # E(graph_liens)$size <- c(10)
 # V(graph_liens)$color[,ds_ref == T] <- "red"
-tkplot(graph_liens, mode='directed')
 
+# tkplot(graph_liens, mode='directed')
 ```
 vert si espèce définie dans la base de données de ref
 rouge si espèce nouvellement définie (ici, il n''y en a aucune)
@@ -558,6 +557,26 @@ jaune pour tout le reste, qui ici sont supposées être des mutants
 rajouter une notion d'appartenance plus ou moins forte à un autre motu
 le point 972 notamment est intéressant car il sert de jonction entre le groupe des mutants de 3 et le groupe des mutants de 5.
 
+
+
+# Compter le nombre de reads par espèces
+
+Mon objectif est de partir du bas de l'arborescence et de crer une nouvelle colonne où il y aura la nombre de reads théoriques.
+Ensuite, attribuer les reads des motus du bas au motus qui leurs est potentiellement apparenté(s) puis de remonter en attribuant ces dernier ou non selon si ils ont une séquence parente ou non.
+
+```{r}
+count_espece <- NULL
+count_espece <- rbind(count_espece, data.frame(motu = motus$id, 
+                                               count_estime = motus$count))
+
+for (i in nrow(matrice_proba):1) {
+  a <- which(!matrice_proba[i,] == 0)
+  b <- count_espece[a,2] + motus$count[a]* matrice_proba[a,i]
+  count_espece[i,2] <- 0
+  count_espece[a,2] <- b
+}
+View(count_espece)
+```
 
 
 
