@@ -477,75 +477,7 @@ matrice_distance <- matrix(unlist(x), nrow = length(motus$sequence[1:nrow(motus)
 ```
 ## Traiter de façon adéquate les séquence appartenant à la base de données de ref.
 
-Si les séquences sont dans la ref alors, ce sont de vraies espèces et la probabilité qu'elles appartiennent à elle même est donc de 1 et celle d'appartenir à n'importe laquelle des autres est de 0.
-
-```{r}
-matrice_proba <- matrice_distance
-# matrice_proba[1,] <- 0
-for (i in 1:15) {
-  if (motus$dans_ref[i] == T) {
-    matrice_proba[i,] <- 0
-    matrice_proba[i,i] <- 1
-  }
-}
-# matrice_proba
-```
-Si une séquence non attribuée se trouve à 1 de distance de la séquence étudiée, et avant cette séquence dans l'ordre, alors, il est très probable qu'elle ne soit qu'un mutant de cette dernière. Mais là, il n'y a pas de proba associée.
-
-```{r}
-matrice_proba <- matrice_distance
-# matrice_proba[1,] <- 0
-for (i in 1:15) {
-  if (motus$dans_ref[i] == T) {
-    matrice_proba[i,] <- 0
-    matrice_proba[i,i] <- 1
-  }else {
-    if (1 %in% matrice_proba[i,]) {
-      a <- print(which(matrice_proba[i,1:(i-1)] == 1))
-      matrice_proba[i,] <- 0
-       matrice_proba[i,a] <- 1
-    }
-  }
-  
-}
-# matrice_proba
-```
-
-Maintenant, au cas où il y a soit plusieurs séquences avec plus de reads à 1 de distance ou au contraire aucune.
-
-
-problème ligne 28, la probabilité d’attribution de la ligne 28 est de 0
-```{r}
-matrice_proba <- matrice_distance
-# matrice_proba[1,] <- 0
-for (i in 1:nrow(motus)) {
-  if (motus$dans_ref[i] == T) {
-    matrice_proba[i,] <- 0
-    matrice_proba[i,i] <- 1
-  }else {
-    if (1 %in% matrice_proba[i,1:(i-1)]) {
-      a <- which(matrice_proba[i,1:(i-1)] == 1)
-      # print(length(a))
-      if (length(a) == 1) {
-        matrice_proba[i,] <- 0
-        matrice_proba[i,a] <- 1 # se rattache à cette espèce
-      }else {
-        matrice_proba[i,] <- 0
-        matrice_proba[i,a] <- (motus$count[a]/sum(motus$count[a])) # proba répartie
-      }
-    }else{
-      matrice_proba[i,] <- 0
-      matrice_proba[i,i] <- 1 # définition d'une probable nouvelle espèce
-    }
-  }
-  # print(sum(matrice_proba[i,]))
-}
-# matrice_proba
-```
-
-
-
-## Séparation nette entre la matrice de distance et la matrice de proba 
+## construction matrice proba d'appartenance
 
 ```{r}
 matrice_proba <- matrix(data = NA, nrow = nrow(motus), ncol = nrow(motus))
@@ -575,14 +507,16 @@ for (i in 1:nrow(motus)) {
 View(matrice_proba[1:50,1:50])
 ```
 
-## Construction d'une matrice d'adjacence sur le même principe et tracé d'un premier graph
+## Construction d'une matrice d'adjacence (seulement des 1 ou des 0)
 
 ```{r}
 matrice_adj <- matrix(data = NA, nrow = nrow(motus), ncol = nrow(motus))
 # matrice_proba[1,] <- 0
+couleur <- NULL
 for (i in 1:nrow(motus)) {
   if (motus$dans_ref[i] == T) {
     matrice_adj[i,] <- 0 # n'est lié à rien d'autre
+    couleur <- rbind(couleur, "green")
   }else {
     if (1 %in% matrice_distance[i,1:(i-1)]) {
       a <- which(matrice_distance[i,1:(i-1)] == 1)
@@ -590,58 +524,39 @@ for (i in 1:nrow(motus)) {
       if (length(a) == 1) {
         matrice_adj[i,] <- 0
         matrice_adj[i,a] <- 1 # se rattache à cette espèce
+        couleur <- rbind(couleur, "yellow")
       }else {
         matrice_adj[i,] <- 0
         matrice_adj[i,a] <- 1 # lié aux deux mais perte de l'info de la répartition entre les deux
+        couleur <- rbind(couleur, "yellow")
       }
     }else{
       matrice_adj[i,] <- 0 # définition d'une probable nouvelle espèce
+      couleur <- rbind(couleur, "red")
     }
-  }
-}
-
-graph_liens <- graph_from_adjacency_matrix(matrice_adj[1:nrow(motus),1:nrow(motus)])
-V(graph_liens)$color <- "grey"
-# E(graph_liens)$size <- c(10)
-# tkplot(graph_liens, mode='directed')
-```
-
-## Customization du graph, ajout colonne dans ref ou nom, d'une colonne count et du coup.
-
-```{r}
-df_graph <- NULL
-df_graph <- rbind(df_graph, data.frame(adj = matrice_adj, ds_ref = motus$dans_ref, count = motus$count))
-View(df_graph)
-
-couleur <- NULL
-for (i in 1:nrow(motus)) {
-  if (motus$dans_ref[i] == T) {
-    couleur <- rbind(couleur, "green")# apparaît dans la base de données de ref
-  }else {
-    couleur <- rbind(couleur, "yellow")# absent de la base de données
   }
 }
 
 taille_vertex <- 3*log10(motus$count)
 
-length(couleur)
+# length(couleur)
 
-graph_liens <- graph_from_adjacency_matrix(as.matrix(df_graph[1:nrow(motus),1:nrow(motus)]),add.colnames = NA)
+graph_liens <- graph_from_adjacency_matrix(matrice_adj[1:nrow(motus),1:nrow(motus)])
 V(graph_liens)$color <- couleur
 V(graph_liens)$size <- taille_vertex
+# E(graph_liens)$size <- c(10)
 # V(graph_liens)$color[,ds_ref == T] <- "red"
 tkplot(graph_liens, mode='directed')
 
 ```
+vert si espèce définie dans la base de données de ref
+rouge si espèce nouvellement définie (ici, il n''y en a aucune)
+jaune pour tout le reste, qui ici sont supposées être des mutants
 
-```{r}
-?igraph.plotting
 
 
-```
-
-rajouter une nouvelle couleur pour les espèces déduites
-
+rajouter une notion d'appartenance plus ou moins forte à un autre motu
+le point 972 notamment est intéressant car il sert de jonction entre le groupe des mutants de 3 et le groupe des mutants de 5.
 
 
 
