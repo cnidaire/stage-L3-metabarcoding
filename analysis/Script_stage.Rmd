@@ -630,9 +630,12 @@ View(motus2)
 objectifs: calculer une matrice de distance
 tracer un autre graph
 
+mise en place d'un jeu de données filtrées motus2bis avec un filtre pour les motu avec un nombre de reads inférieur à 2000
 ```{r}
-x <- sapply(motus2$sequence[1:nrow(motus2)], lcs_score, motus2$sequence[1:nrow(motus2)], similarity_mode = "distance")
-matrice_distance2 <- matrix(unlist(x), nrow = length(motus2$sequence[1:nrow(motus2)]), ncol = length(motus2$sequence[1:nrow(motus2)]), byrow = T)
+motus2bis <- motus2[motus2$count >2000,]
+motus2bis
+x <- sapply(motus2bis$sequence[1:nrow(motus2bis)], lcs_score, motus2bis$sequence[1:nrow(motus2bis)], similarity_mode = "distance")
+matrice_distance2 <- matrix(unlist(x), nrow = length(motus2bis$sequence[1:nrow(motus2bis)]), ncol = length(motus2bis$sequence[1:nrow(motus2bis)]), byrow = T)
 # View(matrice_distance2)
 ```
 
@@ -642,10 +645,10 @@ matrice_distance2 <- matrix(unlist(x), nrow = length(motus2$sequence[1:nrow(motu
 mettre dans motus les séquences appartenant à la ref
 
 ```{r}
-motus2[ , "dans_ref"] <- F # créer une nouvelle colonne dans motus et l'initialiser avec des FALSE
-for (c in 1:nrow(motus2)) {
-  if (motus2$sequence[c] %in% reference$Sequence.ID) {
-    motus2$dans_ref[c] <- T
+motus2bis[ , "dans_ref"] <- F # créer une nouvelle colonne dans motus et l'initialiser avec des FALSE
+for (c in 1:nrow(motus2bis)) {
+  if (motus2bis$sequence[c] %in% reference$Sequence.ID) {
+    motus2bis$dans_ref[c] <- T
   }
 } 
 ```
@@ -653,11 +656,11 @@ for (c in 1:nrow(motus2)) {
 matrice adj
 
 ```{r}
-matrice_adj2 <- matrix(data = NA, nrow = nrow(motus2), ncol = nrow(motus2))
+matrice_adj2 <- matrix(data = NA, nrow = nrow(motus2bis), ncol = nrow(motus2bis))
 
 couleur <- NULL
-for (i in 1:nrow(motus2)) {
-  if (motus2$dans_ref[i] == T) {
+for (i in 1:nrow(motus2bis)) {
+  if (motus2bis$dans_ref[i] == T) {
     matrice_adj2[i,] <- 0 # n'est lié à rien d'autre
     couleur <- rbind(couleur, "green")
   }else {
@@ -680,15 +683,21 @@ for (i in 1:nrow(motus2)) {
   }
 }
 
-taille_vertex <- 3*log10(motus2$count)
+taille_vertex <- 3*log10(motus2bis$count)
 
-graph_liens <- graph_from_adjacency_matrix(matrice_adj2[1:nrow(motus2),1:nrow(motus2)])
+graph_liens <- graph_from_adjacency_matrix(matrice_adj2[1:nrow(motus2bis),1:nrow(motus2bis)])
 V(graph_liens)$color <- couleur
 V(graph_liens)$size <- taille_vertex
 
 tkplot(graph_liens, mode='directed')
 ```
 
-mettre un filtre pour retirer les motus avec moins de 2000
+# Retirer ceux qui n'ont pas d’arêtes (ce qui ne pointent que vers eux et vers qui personne ne pointe).
+
+regarder dans la matrice d'adj si le motu a une proba d'appartenance à lui même de 1 et si c'est la cas, si il est le seul dans sa colonne à être renvoyé vers lui
+
+
+
+
 
 

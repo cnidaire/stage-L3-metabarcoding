@@ -69,3 +69,5 @@ Jusqu'à "étude de la distance entre les variants" dans [mon sujet](doc/stageL3
 - mise en place d'un programme permettant de compter le nomre de count théoriques pour chaque espèce.
 - tracé du spectre de Hill théorique
 - comparaison entre le spectre de hill que nous avions tracé avec les données brut et celui théorique en observant jusqu'à une distance de 1
+- retracer un graph avec un jeu de donné plus important
+- filtrer les données pour que le calcul ne mette pas trop de temps.
