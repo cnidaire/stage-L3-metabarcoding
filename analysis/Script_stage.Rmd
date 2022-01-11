@@ -575,8 +575,52 @@ for (i in nrow(matrice_proba):1) {
   count_espece[i,2] <- 0
   count_espece[a,2] <- b
 }
+count_espece[count_espece$count_estime != 0,] # pour n'avoir que les motus avec un count estime différent de 0 (donc les espèces théoriques)
 View(count_espece)
 ```
+
+```{r}
+spectre_hill <- function(q,base_de_donnee){
+  ps <- ((base_de_donnee)/(sum(base_de_donnee)))# calcule tout les ps de la base de donnée demandée
+  if (q == 1) {
+    exp(-sum(ps*log(ps)))
+    }else {
+    sum(ps^q)^(1/(1-q))
+  }
+}
+nombre_q <- seq(0,3,0.1)
+
+
+# sapply(nombre_q,spectre_hill,count_espece[count_espece$count_estime != 0,]$count_estime)
+
+hill_estimation <- data.frame(q=nombre_q, Qd=sapply(nombre_q,spectre_hill, count_espece[count_espece$count_estime != 0,]$count_estime))
+
+hill_estimation
+```
+
+
+```{r}
+Graph <- ggplot(data = hill_estimation, aes(x = q, y = log10(Qd))) +
+  # On trace la ligne
+  geom_line() +
+  ggtitle("Estimation du spectre de Hill") +
+  theme(plot.title = element_text(hjust = 0.5))
+Graph
+```
+
+
+
+```{r}
+ps <- ((count_espece[count_espece$count_estime != 0,]$count_estime)/ (sum(count_espece[count_espece$count_estime != 0,]$count_estime)))
+ps
+```
+
+
+
+
+
+
+
 
 
 
