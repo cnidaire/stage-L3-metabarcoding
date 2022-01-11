@@ -546,7 +546,7 @@ V(graph_liens)$size <- taille_vertex
 # E(graph_liens)$size <- c(10)
 # V(graph_liens)$color[,ds_ref == T] <- "red"
 
-tkplot(graph_liens, mode='directed')
+# tkplot(graph_liens, mode='directed')
 ```
 vert si espèce définie dans la base de données de ref
 rouge si espèce nouvellement définie (ici, il n''y en a aucune)
@@ -576,7 +576,7 @@ for (i in nrow(matrice_proba):1) {
   count_espece[a,2] <- b
 }
 count_espece[count_espece$count_estime != 0,] # pour n'avoir que les motus avec un count estime différent de 0 (donc les espèces théoriques)
-View(count_espece)
+# View(count_espece)
 ```
 
 ## création data frame pour le spectre de Hill théorique
@@ -618,15 +618,77 @@ ggplot(data = comparaison_spectre_hill, aes(x = q, y = log10(Qd), colour= proven
 
 
 
+# Nouvelles données
+
+```{r}
+motus2 <- read.table("motus_afrique_sud_remi2.txt")
+data2 <- read.table("data_afrique_sud_remi2.txt")
+samples2 <- read.table("samples_afrique_sud_remi2.txt")
+View(motus2)
+```
+
+objectifs: calculer une matrice de distance
+tracer un autre graph
+
+```{r}
+x <- sapply(motus2$sequence[1:nrow(motus2)], lcs_score, motus2$sequence[1:nrow(motus2)], similarity_mode = "distance")
+matrice_distance2 <- matrix(unlist(x), nrow = length(motus2$sequence[1:nrow(motus2)]), ncol = length(motus2$sequence[1:nrow(motus2)]), byrow = T)
+# View(matrice_distance2)
+```
+
+(ce calcul a mis 2min20sec à être fait)
 
 
+mettre dans motus les séquences appartenant à la ref
 
+```{r}
+motus2[ , "dans_ref"] <- F # créer une nouvelle colonne dans motus et l'initialiser avec des FALSE
+for (c in 1:nrow(motus2)) {
+  if (motus2$sequence[c] %in% reference$Sequence.ID) {
+    motus2$dans_ref[c] <- T
+  }
+} 
+```
 
+matrice adj
 
+```{r}
+matrice_adj2 <- matrix(data = NA, nrow = nrow(motus2), ncol = nrow(motus2))
 
+couleur <- NULL
+for (i in 1:nrow(motus2)) {
+  if (motus2$dans_ref[i] == T) {
+    matrice_adj2[i,] <- 0 # n'est lié à rien d'autre
+    couleur <- rbind(couleur, "green")
+  }else {
+    if (1 %in% matrice_distance2[i,1:(i-1)]) {
+      a <- which(matrice_distance2[i,1:(i-1)] == 1)
+      # print(length(a))
+      if (length(a) == 1) {
+        matrice_adj2[i,] <- 0
+        matrice_adj2[i,a] <- 1 # se rattache à cette espèce
+        couleur <- rbind(couleur, "yellow")
+      }else {
+        matrice_adj2[i,] <- 0
+        matrice_adj2[i,a] <- 1 # lié aux deux mais perte de l'info de la répartition entre les deux
+        couleur <- rbind(couleur, "yellow")
+      }
+    }else{
+      matrice_adj2[i,] <- 0 # définition d'une probable nouvelle espèce
+      couleur <- rbind(couleur, "red")
+    }
+  }
+}
 
+taille_vertex <- 3*log10(motus2$count)
 
+graph_liens <- graph_from_adjacency_matrix(matrice_adj2[1:nrow(motus2),1:nrow(motus2)])
+V(graph_liens)$color <- couleur
+V(graph_liens)$size <- taille_vertex
 
+tkplot(graph_liens, mode='directed')
+```
 
+mettre un filtre pour retirer les motus avec moins de 2000
 
 
