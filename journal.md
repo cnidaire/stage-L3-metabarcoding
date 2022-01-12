@@ -71,3 +71,13 @@ Jusqu'à "étude de la distance entre les variants" dans [mon sujet](doc/stageL3
 - comparaison entre le spectre de hill que nous avions tracé avec les données brut et celui théorique en observant jusqu'à une distance de 1
 - retracer un graph avec un jeu de donné plus important
 - filtrer les données pour que le calcul ne mette pas trop de temps.
+
+# Mercredi 12 janvier
+
+- petit récap de quel matrice correspond à quoi:
+  - matrice ditance
+  - matrice proba
+  - matrice adj
+  - matrice distance2
+  - matrice adj2
+  - matrice adj 2bis

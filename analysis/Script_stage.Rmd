@@ -662,7 +662,7 @@ couleur <- NULL
 for (i in 1:nrow(motus2bis)) {
   if (motus2bis$dans_ref[i] == T) {
     matrice_adj2[i,] <- 0 # n'est lié à rien d'autre
-    couleur <- rbind(couleur, "green")
+    # couleur <- rbind(couleur, "green")
   }else {
     if (1 %in% matrice_distance2[i,1:(i-1)]) {
       a <- which(matrice_distance2[i,1:(i-1)] == 1)
@@ -670,15 +670,15 @@ for (i in 1:nrow(motus2bis)) {
       if (length(a) == 1) {
         matrice_adj2[i,] <- 0
         matrice_adj2[i,a] <- 1 # se rattache à cette espèce
-        couleur <- rbind(couleur, "yellow")
+        # couleur <- rbind(couleur, "yellow")
       }else {
         matrice_adj2[i,] <- 0
         matrice_adj2[i,a] <- 1 # lié aux deux mais perte de l'info de la répartition entre les deux
-        couleur <- rbind(couleur, "yellow")
+        # couleur <- rbind(couleur, "yellow")
       }
     }else{
       matrice_adj2[i,] <- 0 # définition d'une probable nouvelle espèce
-      couleur <- rbind(couleur, "red")
+      # couleur <- rbind(couleur, "red")
     }
   }
 }
@@ -686,15 +686,64 @@ for (i in 1:nrow(motus2bis)) {
 taille_vertex <- 3*log10(motus2bis$count)
 
 graph_liens <- graph_from_adjacency_matrix(matrice_adj2[1:nrow(motus2bis),1:nrow(motus2bis)])
-V(graph_liens)$color <- couleur
+# V(graph_liens)$color <- couleur
 V(graph_liens)$size <- taille_vertex
 
 tkplot(graph_liens, mode='directed')
+
+View(matrice_adj2)
 ```
 
 # Retirer ceux qui n'ont pas d’arêtes (ce qui ne pointent que vers eux et vers qui personne ne pointe).
 
-regarder dans la matrice d'adj si le motu a une proba d'appartenance à lui même de 1 et si c'est la cas, si il est le seul dans sa colonne à être renvoyé vers lui
+regarder dans la matrice de proba si le motu a une proba d'appartenance à lui même de 1 et si c'est la cas, si il est le seul dans sa colonne à être renvoyé vers lui
+
+
+
+```{r}
+matrice_adj2[,1] == 0
+
+length(which(matrice_adj2 [,1] == 1)) == 78
+
+
+View(matrice_adj2)
+
+motu_supr <- vector()
+
+motu_supr
+
+motu_supr <- c(motu_supr,1)
+
+motu_supr
+
+
+```
+```{r}
+motu_supr <- vector()
+for (i in 1:nrow(matrice_adj2)) {
+  if (length(which(matrice_adj2[,i]))==0) {
+      motu_supr <- c(motu_supr,i)
+  }
+}
+
+matrice_adj2bis <- matrice_adj2
+matrice_adj2bis[motu_supr,] <-NULL
+matrice_adj2bis[,motu_supr] <-NULL
+
+taille_vertex <- 3*log10(motus2bis$count)
+
+graph_liens <- graph_from_adjacency_matrix(matrice_adj2[1:nrow(motus2bis),1:nrow(motus2bis)])
+V(graph_liens)$color <- "grey"
+V(graph_liens)$size <- taille_vertex
+
+tkplot(graph_liens, mode='directed')
+
+View(matrice_adj2)
+```
+
+
+
+
 
 
 
