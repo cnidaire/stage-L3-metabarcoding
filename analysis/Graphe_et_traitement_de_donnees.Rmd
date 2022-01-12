@@ -1,0 +1,33 @@
+---
+title: "Graph_et_traitement_de_donnees"
+author: "Rémi Legrand"
+date: "12/01/2022"
+output: 
+  html_document :
+    toc: true # table of content true
+    toc_float: True
+    toc_depth: 3  # upto three depths of headings (specified by #, ## and ###)
+    number_sections: true  ## if you want number sections at each table header
+    theme: united  # many options for theme, this one is my favorite.
+---
+
+# Importation des packages necessaires et des données
+
+```{r message=FALSE, warning=FALSE}
+library(reshape)
+library(ROBITools2) #analyse des données métabarcoding
+library(ggplot2) #affichage graphique avancé
+library(dplyr) #pour manipuler les données
+library(tidyr) #idem
+library(stringr) #pour manipuler les chaînes de caractères
+library(openxlsx) #pour manipuler les fichiers .xlsx
+library(igraph)
+```
+
+```{r}
+motus2 <- read.table("motus_afrique_sud_remi2.txt")
+data2 <- read.table("data_afrique_sud_remi2.txt")
+samples2 <- read.table("samples_afrique_sud_remi2.txt")
+View(motus2)
+```
+
