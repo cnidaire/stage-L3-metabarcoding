@@ -223,7 +223,7 @@ sur celle ci, demande environ 6 min de calcul
 
 ```{r}
 spectre_hill <- function(q,nom_espece){
-  ps <- ((data[data$espece == nom_espece,]$count)/(sum(data[data$espece == nom_espece,]$count))) # ratio du nombre de count par motu sur le nombre de count des motu
+  ps <- ((data[!is.na(data$espece) & data$espece == nom_espece,]$count)/(sum(data[!is.na(data$espece) & data$espece == nom_espece,]$count))) # ratio du nombre de count par motu sur le nombre de count des motu en homettant les NA qui par defaut semblent être considérés comme des TRUE
   if (q == 1) {
     a <- exp(-sum(ps*log(ps)))
   }else {
@@ -231,15 +231,27 @@ spectre_hill <- function(q,nom_espece){
   }
   return(a)
 }
-nombre_q <- seq(0,1,1)
-# ici, nous avons dû utiliser la fonction couplée avec un if et un esle au lieu d'un if else, ce qui fait qu'il ne peut rentrer dans la fonction qu'une seule valeur, pour pouvoir rentre un vecteur, il va falloir recourir à sapply.
-sapply(nombre_q,spectre_hill,"Phacochoerus africanus") # exemple pour une espèce random.
-spectre_hill(0, "Phacochoerus africanus")
-length(which(data$espece == "Phacochoerus africanus"))
+nombre_q <- seq(0,6,1)
+Qd <- sapply(nombre_q,spectre_hill,"Tragelaphus oryx") # exemple pour une espèce random. mais ne fonctionne que pour le 0
+
+
+length(data[!is.na(data$espece) & data$espece == "Tragelaphus oryx",]$count)# petite verif pour q=0 (qui compte le nombre de motus différents )
+```
+
+```{r}
+nombre_q <- seq(0,3,0.1)
+df <- NULL
+df <- rbind(df, data.frame(q=nombre_q, Qd <- sapply(nombre_q,spectre_hill,"Tragelaphus oryx")))
+ggplot(data = df, aes(x = q, y = log10(Qd))) +
+  geom_line() +
+  ggtitle("Spectre de Hill pour l'alimentation de Tragelaphus oryx") + 
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 
-
+```{r}
+unique(data$espece)
+```
 
 
 
