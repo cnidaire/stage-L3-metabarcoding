@@ -81,3 +81,17 @@ Jusqu'à "étude de la distance entre les variants" dans [mon sujet](doc/stageL3
   - matrice distance2
   - matrice adj2
   - matrice adj 2bis
+- début de la mise en fonction de la matrice de distance et de si les données figurent dans la base de ref
+  
+# jeudi 13 janvier
+
+## pour mettre les graphiques dans un pdf
+pdf("ajustement_qpcr_2.pdf") 
+boucle for avec des prints gglot # applique le code dans le pdf
+dev.off() # ferme le pdf
+
+- fin de ce qui n'avais pas été fait la journée précédente, mise en fonction pour la matrice d'adjacence, pour la liste de couleur ainsi que pour le tracé du graphe.
+
+
+
+

@@ -30,105 +30,136 @@ data2 <- read.table("data_afrique_sud_remi2.txt")
 samples2 <- read.table("samples_afrique_sud_remi2.txt")
 reference <- read.xlsx("Plant reference collection sequence information.xlsx", 
                        sheet = 2)
-View(reference)
+View(motus2)
 ```
 
 # Rédaction de fonction pour le traitement des distances entre les motus
 
 
-## fonction pour calculer la matrice de distance
+## Fonction pour calculer la matrice de distance
 ```{r}
-matrice_distance <- function(sequence, seuil) {
-  sequence_bis <- sequence[sequence$count > seuil,]
-  x <- sapply(sequence_bis$sequence[1:nrow(sequence_bis)], lcs_score, sequence_bis$sequence[1:nrow(sequence_bis)], similarity_mode = "distance")
-  matrice_dist <- matrix(unlist(x), nrow = length(sequence_bis$sequence[1:nrow(sequence_bis)]), ncol = length(sequence_bis$sequence[1:nrow(sequence_bis)]), byrow = T)
+matrice_distance <- function(base_donnee, seuil) {
+  base_donnee_bis <- base_donnee[base_donnee$count > seuil,] # création d'une nouvelle base de donné qui ne contient que des motus dont le nombre de reads est supérieur au seuil.
+  
+  x <- sapply(base_donnee_bis$sequence[1:nrow(base_donnee_bis)], lcs_score, base_donnee_bis$sequence[1:nrow(base_donnee_bis)], similarity_mode = "distance")
+  
+  matrice_dist <- matrix(unlist(x), nrow = length(base_donnee_bis$sequence[1:nrow(base_donnee_bis)]), ncol = length(base_donnee_bis$sequence[1:nrow(base_donnee_bis)]), byrow = T)
+  
   return(matrice_dist)
 }
 
+distance <- matrice_distance(motus2, 2000)
+ncol(distance)
+nrow(distance)
+# View(distance)
 ```
+
+On obtient une matrice contenant les distance génétiques entre les différents motus avec un nombre de lecture supérieur à une valeur seuil.
 
 ## Fonction pour savoir si l'espèce est dans la ref
 
 ```{r}
 dans_ref <- function(base_donnee, ref){
   base_donnee[,"dans_ref"] <- F
+  nrow(base_donnee)
   for (c in 1:nrow(base_donnee)) {
     if (base_donnee$sequence[c] %in% ref$Sequence.ID) {
       base_donnee$dans_ref[c] <- T
-      return(base_donnee)
+      
     }
-  } 
+  }
+  return(base_donnee)
 }
 
-a <- dans_ref(motus2, reference)
-View(a)
+motus2_ref <- dans_ref(motus2, reference)
 ```
 
+Ici, on annote la base de données en ajoutant une nouvelle colonne et si la séquence appartient à la base de données, alors, il y a marqué True dans la base de données.
 
+## Fonction pour la matrice de distance
 
 ```{r}
-matrice_adjacence <- function(matrice_distance, seuil_lien){
-  for (i in 1:nrow(motus2bis)) {
-    if (motus2bis$dans_ref[i] == T) {
-      matrice_adj2[i,] <- 0 # n'est lié à rien d'autre
+matrice_adjacence <- function(matrice_distance, base_donnee_ref){
+  couleur <- NULL
+  matrice_adj <- matrix(data = NA, nrow = nrow(matrice_distance), ncol = ncol(matrice_distance))
+  for (i in 1:nrow(matrice_distance)) {
+    if (base_donnee_ref$dans_ref[i] == T) {
+      matrice_adj[i,] <- 0 # n'est lié à rien d'autre
+      couleur <- rbind(couleur, "green")
     }else {
-      if (1 %in% matrice_distance2[i,1:(i-1)]) {
-        a <- which(matrice_distance2[i,1:(i-1)] == 1)
+      if (1 %in% matrice_distance[i,1:(i-1)]) { # si il y a au moins un motu à 1 de distance génétique
+        a <- which(matrice_distance[i,1:(i-1)] == 1) # on marque lesquels sont à un de distance
         if (length(a) == 1) {
-          matrice_adj2[i,] <- 0
-          matrice_adj2[i,a] <- 1 # se rattache à cette espèce
+          matrice_adj[i,] <- 0
+          matrice_adj[i,a] <- 1 # se rattache à cette espèce
+          couleur <- rbind(couleur, "yellow")
         }else {
-          matrice_adj2[i,] <- 0
-          matrice_adj2[i,a] <- 1 # lié aux deux mais perte de l'info de la répartition entre les deux
+          matrice_adj[i,] <- 0
+          matrice_adj[i,a] <- 1 # lié aux deux mais perte de l'info de la répartition entre les deux
+          couleur <- rbind(couleur, "yellow")
         }
       }else{
-        matrice_adj2[i,] <- 0 # définition d'une probable nouvelle espèce
+        matrice_adj[i,] <- 0 # définition d'une probable nouvelle espèce
+        couleur <- rbind(couleur, "red")
       }
     }
   }
+  return(matrice_adj)
 }
+
+matrice_adj <- matrice_adjacence(distance, motus2_ref)
+# nrow(matrice_adj)
+# ncol(matrice_adj)
+# View(matrice_adj)
 ```
-
-
 
 ```{r}
-matrice_adj2 <- matrix(data = NA, nrow = nrow(motus2bis), ncol = nrow(motus2bis))
-
-couleur <- NULL
-for (i in 1:nrow(motus2bis)) {
-  if (motus2bis$dans_ref[i] == T) {
-    matrice_adj2[i,] <- 0 # n'est lié à rien d'autre
-    # couleur <- rbind(couleur, "green")
-  }else {
-    if (1 %in% matrice_distance2[i,1:(i-1)]) {
-      a <- which(matrice_distance2[i,1:(i-1)] == 1)
-      # print(length(a))
-      if (length(a) == 1) {
-        matrice_adj2[i,] <- 0
-        matrice_adj2[i,a] <- 1 # se rattache à cette espèce
-        # couleur <- rbind(couleur, "yellow")
-      }else {
-        matrice_adj2[i,] <- 0
-        matrice_adj2[i,a] <- 1 # lié aux deux mais perte de l'info de la répartition entre les deux
-        # couleur <- rbind(couleur, "yellow")
+liste_couleur <- function(matrice_distance, base_donnee_ref){
+  couleur <- NULL
+  matrice_adj <- matrix(data = NA, nrow = nrow(matrice_distance), ncol = ncol(matrice_distance))
+  for (i in 1:nrow(matrice_distance)) {
+    if (base_donnee_ref$dans_ref[i] == T) {
+      couleur <- rbind(couleur, "green")
+    }else {
+      if (1 %in% matrice_distance[i,1:(i-1)]) { # si il y a au moins un motu à 1 de distance génétique
+          couleur <- rbind(couleur, "yellow")
+      }else{
+        couleur <- rbind(couleur, "red")
       }
-    }else{
-      matrice_adj2[i,] <- 0 # définition d'une probable nouvelle espèce
-      # couleur <- rbind(couleur, "red")
     }
   }
+  return(couleur)
 }
 
-taille_vertex <- 3*log10(motus2bis$count)
-
-graph_liens <- graph_from_adjacency_matrix(matrice_adj2[1:nrow(motus2bis),1:nrow(motus2bis)])
-# V(graph_liens)$color <- couleur
-V(graph_liens)$size <- taille_vertex
-
-tkplot(graph_liens, mode='directed')
-
-View(matrice_adj2)
+couleur <- liste_couleur(distance, motus2_ref)
+length(couleur)
 ```
+
+```{r}
+graphe <- function(matrice_adjacence,base_donnee, couleur) {
+  graph_liens <- graph_from_adjacency_matrix(matrice_adjacence[1:nrow(matrice_adjacence),1:nrow(matrice_adjacence)])
+  V(graph_liens)$color <- couleur
+  V(graph_liens)$size <- 3*log10(base_donnee$count)
+
+  return(tkplot(graph_liens, mode='directed'))
+}
+graphe(matrice_adj, motus2, couleur)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
