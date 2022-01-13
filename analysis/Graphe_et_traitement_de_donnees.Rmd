@@ -33,7 +33,10 @@ reference <- read.xlsx("Plant reference collection sequence information.xlsx",
 View(motus2)
 ```
 
-# Rédaction de fonction pour le traitement des distances entre les motus
+
+
+
+# Rédaction de fonction pour le traitement des distances entre les motus et le tracé du graphe
 
 
 ## Fonction pour calculer la matrice de distance
@@ -113,6 +116,8 @@ matrice_adj <- matrice_adjacence(distance, motus2_ref)
 # View(matrice_adj)
 ```
 
+## fonction pour obtenir une liste avec les couleurs
+
 ```{r}
 liste_couleur <- function(matrice_distance, base_donnee_ref){
   couleur <- NULL
@@ -133,7 +138,33 @@ liste_couleur <- function(matrice_distance, base_donnee_ref){
 
 couleur <- liste_couleur(distance, motus2_ref)
 length(couleur)
+couleur[2:5]
 ```
+## fonction filtrant les motus isolés génétiquement des autres 
+
+```{r}
+filtre_isolement <- function(matrice_adjacence) {
+  motus_a_supr <- NULL
+  for (i in 1:nrow(matrice_adjacence)) {
+    if (is.null(which(1 %in% matrice_adjacence[i,])) & is.null(which(1 %in% matrice_adjacence[i,]))) {
+      motus_a_supr <- c(motus_a_supr,i)
+    }
+  }
+  return(motus_a_supr)
+}
+
+motus_a_supr <- filtre_isolement(matrice_adj)
+motus_a_supr
+
+matrice_adj[motus_a_supr,] <- NULL
+matrice_adj[,motus_a_supr] <- NULL
+couleur[motus_a_supr] <-NULL
+```
+
+pour l'instant, ne semble rien filtrer du tout puique motus_a_supr est vide
+
+
+## fonction pour tracer le graphe
 
 ```{r}
 graphe <- function(matrice_adjacence,base_donnee, couleur) {
