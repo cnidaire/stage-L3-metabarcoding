@@ -35,9 +35,6 @@ data <- read.table("data_afrique_sud_remi.txt")
 samples <- read.table("samples_afrique_sud_remi.txt")
 ```
 
-
-
-
 # Rédaction de fonction pour le traitement des distances entre les motus et le tracé du graphe
 
 
@@ -219,6 +216,11 @@ unique(data$espece)
 ```
 sur celle ci, demande environ 6 min de calcul
 
+Je tente avec une fonction de plus haut niveau:
+```{r}
+data %>% left_join(select(samples,id,ob0served_scientific_name) , by = c("sample" = "id")) %>%
+  drop_na() %>% rename(espece = observed_scientific_name) -> data
+```
 
 
 ```{r}
@@ -231,6 +233,16 @@ spectre_hill <- function(q,nom_espece){
   }
   return(a)
 }
+spectre_hill2 <- function(val,q){
+  ps <- val/sum(val)
+  if (q == 1) {
+    a <- exp(-sum(ps*log(ps)))
+  }else {
+    a <- sum(ps^q)^(1/(1-q))
+  }
+  return(a)
+}
+
 nombre_q <- seq(0,6,1)
 Qd <- sapply(nombre_q,spectre_hill,"Tragelaphus oryx") # exemple pour une espèce random. mais ne fonctionne que pour le 0
 
@@ -250,23 +262,70 @@ ggplot(data = df, aes(x = q, y = log10(Qd))) +
 
 
 ```{r}
-especes = unique(data$espece)
-especes = especes[!is.na(especes)]
-nombre_q <- seq(0,3,0.1)
-for (e in especes) {
-  df <- data.frame(q = nombre_q, Qd = sapply(nombre_q,spectre_hill,e))
-  # print(df)
-  p = ggplot(data = df, aes(x = q, y = Qd)) +
-    geom_line() + scale_y_log10(limits=c(1,1E5)) +
-    ggtitle(paste("Spectre de Hill pour l'alimentation de", e)) + 
-    theme(plot.title = element_text(hjust = 0.5))
-  print(p)
-}
+system.time({
+  especes = unique(data$espece)
+  especes = especes[!is.na(especes)]
+  nombre_q <- seq(0,3,0.1)
+  for (e in especes) {
+    df <- data.frame(q = nombre_q, Qd = sapply(nombre_q,spectre_hill,e))
+    # print(df)
+    p = ggplot(data = df, aes(x = q, y = Qd)) +
+      geom_line() + scale_y_log10(limits=c(1,1E5)) +
+      ggtitle(paste("Spectre de Hill pour l'alimentation de", e)) + 
+      theme(plot.title = element_text(hjust = 0.5))
+    print(p)
+  }
+})
 ```
 
 
+```{r}
+data %>% drop_na() -> data
 
+especes = unique(data$espece)
+especes = especes[!is.na(especes)]
 
+q_values = seq(0,3,0.1)
+
+# Version lente avec sapply
+df = data.frame()
+system.time({
+  for (e in especes) {
+    df <- rbind(df, data.frame(espece = e, q = q_values, Qd = sapply(q_values,spectre_hill,e)))
+    # print(df)
+  }
+})
+
+# Version rapide et moderne avec le tidyverse !!! :)
+df = data.frame()
+system.time({
+  for (e in especes) {
+    d = data.frame(espece = e, q = q_values)
+    val = data[data$espece == e,]$count
+    df <- rbind(df, d %>% group_by(q) %>% mutate(Qd =  spectre_hill2(val = val, q = q)))
+    # print(df)
+  }
+})
+
+# expand.grid(espece = especes, q = q_values) %>%
+#   nest_by(espece) %>%
+#     group_by(q) %>% mutate(Qd =  spectre_hill2(val = data[data$espece == espece,]$count, q = q))
+
+#une autre version un peu lent
+
+expand.grid(espece = especes, q = q_values) %>%
+    group_by(espece, q) %>% mutate(Qd =  spectre_hill2(val = data[data$espece == espece,]$count, q = q))
+
+system.time({
+  for (e in especes) {
+    p = ggplot(data = df[df$espece == e,], aes(x = q, y = Qd)) +
+      geom_line() + scale_y_log10(limits=c(1,1E5)) +
+      ggtitle(paste("Spectre de Hill pour l'alimentation de", e)) + 
+      theme(plot.title = element_text(hjust = 0.5))
+    print(p)
+  }
+})
+```
 
 
 
