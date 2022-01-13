@@ -250,7 +250,18 @@ ggplot(data = df, aes(x = q, y = log10(Qd))) +
 
 
 ```{r}
-unique(data$espece)
+especes = unique(data$espece)
+especes = especes[!is.na(especes)]
+nombre_q <- seq(0,3,0.1)
+for (e in especes) {
+  df <- data.frame(q = nombre_q, Qd = sapply(nombre_q,spectre_hill,e))
+  # print(df)
+  p = ggplot(data = df, aes(x = q, y = Qd)) +
+    geom_line() + scale_y_log10(limits=c(1,1E5)) +
+    ggtitle(paste("Spectre de Hill pour l'alimentation de", e)) + 
+    theme(plot.title = element_text(hjust = 0.5))
+  print(p)
+}
 ```
 
 
