@@ -49,9 +49,9 @@ matrice_distance <- function(base_donnee, seuil) {
   return(matrice_dist)
 }
 
-distance <- matrice_distance(motus2, 2000)
-ncol(distance)
-nrow(distance)
+# distance <- matrice_distance(motus2, 2000)
+# ncol(distance)
+# nrow(distance)
 # View(distance)
 ```
 
@@ -72,7 +72,7 @@ dans_ref <- function(base_donnee, ref){
   return(base_donnee)
 }
 
-motus2_ref <- dans_ref(motus2, reference)
+# motus2_ref <- dans_ref(motus2, reference)
 ```
 
 Ici, on annote la base de données en ajoutant une nouvelle colonne et si la séquence appartient à la base de données, alors, il y a marqué True dans la base de données.
@@ -108,7 +108,7 @@ matrice_adjacence <- function(matrice_distance, base_donnee_ref){
   return(matrice_adj)
 }
 
-matrice_adj <- matrice_adjacence(distance, motus2_ref)
+# matrice_adj <- matrice_adjacence(distance, motus2_ref)
 # nrow(matrice_adj)
 # ncol(matrice_adj)
 # View(matrice_adj)
@@ -134,9 +134,9 @@ liste_couleur <- function(matrice_distance, base_donnee_ref){
   return(couleur)
 }
 
-couleur <- liste_couleur(distance, motus2_ref)
-length(couleur)
-couleur[2:5]
+# couleur <- liste_couleur(distance, motus2_ref)
+# length(couleur)
+# couleur[2:5]
 ```
 ## fonction filtrant les motus isolés génétiquement des autres 
 
@@ -151,12 +151,12 @@ filtre_isolement <- function(matrice_adjacence) {
   return(motus_a_supr)
 }
 
-motus_a_supr <- filtre_isolement(matrice_adj)
-motus_a_supr
-
-matrice_adj[motus_a_supr,] <- NULL
-matrice_adj[,motus_a_supr] <- NULL
-couleur[motus_a_supr] <-NULL
+# motus_a_supr <- filtre_isolement(matrice_adj)
+# motus_a_supr
+# 
+# matrice_adj[motus_a_supr,] <- NULL
+# matrice_adj[,motus_a_supr] <- NULL
+# couleur[motus_a_supr] <-NULL
 ```
 
 pour l'instant, ne semble rien filtrer du tout puique motus_a_supr est vide
@@ -172,16 +172,16 @@ graphe <- function(matrice_adjacence,base_donnee, couleur) {
 
   return(tkplot(graph_liens, mode='directed'))
 }
-graphe(matrice_adj, motus2, couleur)
+# graphe(matrice_adj, motus2, couleur)
 ```
 
 
 # Création d'un pdf contenant le spectre de Hill propre à chacun des animaux
 
 ```{r}
-View(samples)
-View(data)
-View(motus)
+# View(samples)
+# View(data)
+# View(motus)
 ```
 
 Je tente avec une fonction de plus haut niveau:
@@ -211,7 +211,7 @@ especes = especes[!is.na(especes)]
 
 q_values = seq(0,3,0.1)
 
-
+especes[1]
 # Version rapide et moderne avec le tidyverse !!! :)
 df = data.frame()
 system.time({
@@ -272,7 +272,7 @@ for (e in especes[1:9]) {
 }
 
 # View(df_echantillon)
-Graph <- ggplot(data = df_echantillon, aes(x = q, y = Qd, colour = echantillon)) +
+Graph <- ggplot(data = df_echantillon, aes(x = q, y = Qd, group = echantillon, colour = espece)) +
   geom_line() +
   scale_y_log10() +
   ggtitle("Spectre de Hill pour les échantillons par espèce") + 
@@ -282,7 +282,81 @@ Graph <- ggplot(data = df_echantillon, aes(x = q, y = Qd, colour = echantillon))
 Graph + facet_wrap(facets = ~ (as.numeric(as.factor(espece))%%9))
 ```
 
+# Le debut de la galère: essayer de tracer le spectre de hill théorique pour une espèce puis pour un echantillon d'une espèce
 
+## Mettre les sequence d'ADN de sample vers data
+
+```{r}
+data %>% left_join(select(motus,id,sequence) , by = c("motu" = "id")) %>%
+  drop_na() -> data
+head(data)
+```
+
+
+## Faire une matrice de distance pour une espèce au pif (en utilisant la fonction matrice_distance)
+
+
+### Calculer la matrice de distance de data et nommer le lignes et colonne avec les identifiants de motus
+
+```{r}
+mat_dist2 <- matrice_distance(motus2,3000)
+rownames(mat_dist2) <- as.factor(motus2$id[motus2$count >3000])
+colnames(mat_dist2) <- as.factor(motus2$id[motus2$count >3000])
+View(mat_dist2)
+```
+
+### Calculer la matrice de proba pour data2
+
+```{r}
+motus2_ref <- dans_ref(motus2, reference)
+motus2_ref
+
+matrice_probabilite <- function(matrice_distance, base_donnee, base_donnee_ref){
+  matrice_proba <- matrix(data = NA, nrow = nrow(matrice_distance), ncol = ncol(matrice_distance))
+  for (i in 1:nrow(matrice_distance)) {
+    if (base_donnee_ref$dans_ref[i] == T) {
+      matrice_proba[i,] <- 1 # n'est lié à rien d'autre
+    }else {
+      if (1 %in% matrice_distance[i,1:(i-1)]) { # si il y a au moins un motu à 1 de distance génétique
+        a <- which(matrice_distance[i,1:(i-1)] == 1) # on marque lesquels sont à un de distance
+        if (length(a) == 1) {
+          matrice_proba[i,] <- 0
+          matrice_proba[i,a] <- 1 # se rattache à cette espèce
+        }else {
+          matrice_proba[i,] <- 0
+          matrice_proba[i,a] <- (motus$count[a]/sum(motus$count[a])) # lié aux deux mais perte de l'info de la répartition entre les deux
+        }
+      }else{
+        matrice_proba[i,] <- 1 # définition d'une probable nouvelle espèce
+      }
+    }
+  }
+  return(matrice_proba)
+}
+matrice_proba <- matrice_probabilite(mat_dist2, "base de donnée", motus2_ref)
+View(matrice_proba)
+```
+
+
+<!-- ```{r} -->
+<!-- # View(data) -->
+<!-- especes = unique(data$espece) -->
+<!-- especes = especes[!is.na(especes)] -->
+<!-- # especes[1] -->
+<!-- summary(data[data$espece == especes[1],]$count) -->
+<!-- View(data[data$espece == especes[1],]) -->
+<!-- # system.time({ -->
+<!-- # mat_dist <-matrice_distance(data[data$espece == especes[1],], 300) -->
+<!-- # }) -->
+<!-- nrow(mat_dist) -->
+<!-- mat_dist2 <- matrice_distance(motus2,3000) -->
+<!-- View(mat_dist2) -->
+<!-- ``` -->
+
+
+## Regrouper ensemble les motus variants avec le motu originel afin de sommer le nombre de reads
+
+## Tracer le spectre de Hill pour une espece
 
 
 
