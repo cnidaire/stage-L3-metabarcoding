@@ -93,5 +93,7 @@ dev.off() # ferme le pdf
 - fin de ce qui n'avais pas été fait la journée précédente, mise en fonction pour la matrice d'adjacence, pour la liste de couleur ainsi que pour le tracé du graphe.
 
 
+# Vendredi 14 janvier
 
-
+- plot du spectre de hill des échantillons pour une espèce afin comparer si le nombre d'échantillons influe beaucoup sur le spectre de Hill de l'alimentation d'une espèce
+- 
