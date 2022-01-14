@@ -233,7 +233,7 @@ system.time({
 #     group_by(espece, q) %>% mutate(Qd =  spectre_hill(val = data[data$espece == espece,]$count, q = q))
 
 
-pdf("Spectre de Hill des espèces.pdf") 
+pdf("Spectre de Hill des espèces.pdf") # démare l'écriture dans le pdf
   for (e in especes) {
     p = ggplot(data = df[df$espece == e,], aes(x = q, y = Qd)) +
       geom_line() + scale_y_log10(limits=c(1,1E5)) +
@@ -242,8 +242,45 @@ pdf("Spectre de Hill des espèces.pdf")
     print(p)
   }
 dev.off() # ferme le pdf
+
+
 ```
 
+# Tracé du spectre de Hill pour différents échantillons appartenant à un même animal
+
+```{r}
+data %>% drop_na() -> data
+especes = unique(data$espece)
+especes = especes[!is.na(especes)]
+q_values = seq(0,3,0.5)
+
+df_echantillon = data.frame()
+for (e in especes[1:9]) {
+  echantillon = unique(data$sample[data$espece == e]) # ici, tant que l'on ne fait pas défiler les e, il faudra le fixer
+  echantillon = echantillon[!is.na(echantillon)]
+  for (s in echantillon[1:20]) {
+    d = data.frame(espece = e, echantillon = s, q = q_values)
+    d
+    val = data[data$sample == s, ]$count
+    val
+    df_echantillon <- rbind(df_echantillon, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q)))
+    # print(df)
+  }
+  d = data.frame(espece = e, echantillon= "global", q = q_values)
+  val = data[data$espece == e,]$count
+    df_echantillon <- rbind(df_echantillon, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q)))
+}
+
+# View(df_echantillon)
+Graph <- ggplot(data = df_echantillon, aes(x = q, y = Qd, colour = echantillon)) +
+  geom_line() +
+  scale_y_log10() +
+  ggtitle("Spectre de Hill pour les échantillons par espèce") + 
+  theme(legend.position = "none")+ 
+  theme(plot.title = element_text(hjust = 0.5)) # permet de centre le titre, si on veut faire des retours à la ligne dans les titres, il fait inserer des \n
+
+Graph + facet_wrap(facets = ~ (as.numeric(as.factor(espece))%%9))
+```
 
 
 
