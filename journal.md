@@ -96,4 +96,7 @@ dev.off() # ferme le pdf
 # Vendredi 14 janvier
 
 - plot du spectre de hill des échantillons pour une espèce afin comparer si le nombre d'échantillons influe beaucoup sur le spectre de Hill de l'alimentation d'une espèce
-- 
+
+
+# Lundi 17 Janvier
+- rédaction de la matrice de proba agrégée permettant d'attribuer les motu à l'espèce dont ils sont dérivés

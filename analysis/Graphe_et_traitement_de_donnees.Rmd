@@ -14,6 +14,7 @@ output:
 # Importation des packages necessaires et des données
 
 ```{r message=FALSE, warning=FALSE}
+# library(tidyverse) # permet de charger ggplot2, tibble, tidyr, readr, purrr, dyplyr
 library(ROBITools2) #analyse des données métabarcoding
 library(ggplot2) #affichage graphique avancé
 library(dplyr) #pour manipuler les données
@@ -172,7 +173,7 @@ graphe <- function(matrice_adjacence,base_donnee, couleur) {
 
   return(tkplot(graph_liens, mode='directed'))
 }
-graphe(matrice_adj, motus2, couleur)
+# graphe(matrice_adj, motus2, couleur)
 ```
 
 
@@ -287,9 +288,9 @@ Graph + facet_wrap(facets = ~ (as.numeric(as.factor(espece))%%9))
 ## Mettre les sequence d'ADN de sample vers data
 
 ```{r}
-data %>% left_join(select(motus,id,sequence) , by = c("motu" = "id")) %>%
-  drop_na() -> data
-head(data)
+data2 %>% left_join(select(motus2,id,sequence) , by = c("motu" = "id")) %>%
+  drop_na() -> data2
+head(data2)
 ```
 
 
@@ -299,10 +300,12 @@ head(data)
 ### Calculer la matrice de distance de data et nommer le lignes et colonne avec les identifiants de motus
 
 ```{r}
+system.time({
 mat_dist2 <- matrice_distance(motus2,3000)
 rownames(mat_dist2) <- as.factor(motus2$id[motus2$count >3000])
 colnames(mat_dist2) <- as.factor(motus2$id[motus2$count >3000])
-View(mat_dist2)
+})
+# View(mat_dist2)
 ```
 
 ### Calculer la matrice de proba pour data2
@@ -315,7 +318,7 @@ motus2_ref
 réalisation d'une fonction pour calculer la matrice de proba
 
 ```{r}
-matrice_probabilite <- function(matrice_distance, base_donnee, base_donnee_ref){
+matrice_probabilite <- function(matrice_distance, base_donnee_ref){
   matrice_proba <- matrix(data = NA, nrow = nrow(matrice_distance), ncol = ncol(matrice_distance))
   for (i in 1:nrow(matrice_distance)) {
     if (base_donnee_ref$dans_ref[i] == T) {
@@ -329,7 +332,7 @@ matrice_probabilite <- function(matrice_distance, base_donnee, base_donnee_ref){
           matrice_proba[i,a] <- 1
         }else {
           matrice_proba[i,] <- 0
-          matrice_proba[i,a] <- (base_donnee$count[a]/sum(base_donnee$count[a])) 
+          matrice_proba[i,a] <- (base_donnee_ref$count[a]/sum(base_donnee_ref$count[a])) 
         }
       }else{
         matrice_proba[i,] <- 0
@@ -343,21 +346,88 @@ matrice_probabilite <- function(matrice_distance, base_donnee, base_donnee_ref){
 
 
 ```{r}
-mat_proba2 <- matrice_probabilite(mat_dist2, motus2, motus2_ref)
+mat_proba2 <- matrice_probabilite(mat_dist2, motus2_ref)
 rownames(mat_proba2) <- as.factor(motus2$id[motus2$count >3000])
 colnames(mat_proba2) <- as.factor(motus2$id[motus2$count >3000])
-View(mat_proba2)
+# View(mat_proba2)
 
-mat_adj2 <- matrice_adjacence(mat_dist2,motus2_ref)
-rownames(mat_adj2) <- as.factor(motus2$id[motus2$count >3000])
-colnames(mat_adj2) <- as.factor(motus2$id[motus2$count >3000])
-View(mat_adj2)
-graphe(mat_adj2,motus2, "grey")
+# mat_adj2 <- matrice_adjacence(mat_dist2,motus2_ref)
+# rownames(mat_adj2) <- as.factor(motus2$id[motus2$count >3000])
+# colnames(mat_adj2) <- as.factor(motus2$id[motus2$count >3000])
+# # View(mat_adj2)
+# graphe(mat_adj2,motus2, "grey")
+# # n'est pas utile
+```
+
+```{r}
+# matrice_test <- matrix(rep(0,25),nrow = 5)
+# matrice_test[1,1] <- 1
+# matrice_test[2,2] <- 1
+# matrice_test[4,3] <- 1
+# matrice_test[5,3] <- 1
+# matrice_test[3,1] <- 0.6
+# matrice_test[3,2] <- 0.4
+# 
+# matrice_test
 ```
 
 
+```{r}
+fonctionne <- 0
+system.time({
+for (a in 1:nrow(mat_proba2)) {
+  enfants <- which(mat_proba2[,a] != 0)
+  if (mat_proba2[a,a] != 1 & length(enfants) != 0) {
+    parents <- which(mat_proba2[a,] != 0)
+    mat_proba2[enfants, parents] <- mat_proba2[enfants,parents] + matrix(mat_proba2[enfants,a], nrow = length(enfants)) %*% matrix(mat_proba2[a,parents],nrow = 1)
+    mat_proba2[enfants,a] <- 0
+    fonctionne <- fonctionne + 1
+  }
+}
+})  
+fonctionne
+# View(mat_proba2)
+```
+0.04 quand il y a des valeurs à changer et 0.03 quand il n'y a pas de valeurs à changer 
+on pourrait donc le re exécuter au vu du temps que cela prends
 
 
+```{r}
+parentee <- function(indiv) {
+  setequal(indiv ,which(mat_proba2[indiv,] != 0))
+}
+  
+faux = 0
+for (a in 1:nrow(mat_proba2)) {
+  parent_a <- which(mat_proba2[a,] != 0)
+  if ( length(which(!sapply(parent_a,parentee))) != 0 ) {
+    faux <- faux + 1
+    print(a)
+  }
+}
+faux
+nrow(mat_proba2)
+```
+vérification de si on s'est trompé
+
+
+## Obtention d'un vecteur contenant le nombre de reads des différentes espèces observées.
+
+```{r}
+# matrix(motus2_ref$count) %*% matrix(mat_proba2) # problème car le vecteur et la matrice n'ont pas les même dimensions
+
+
+motus2[,c("id","count")] %>% filter(count >3000) %>% left_join(select(motus2_ref, id), by = c("id" = "id")) -> vect_count
+
+vect_count
+
+
+a = matrix(1:4, 1, 4, TRUE)
+b = matrix(1:16, 4, 4, TRUE)
+a
+b
+a %*% b
+```
 
 
 
