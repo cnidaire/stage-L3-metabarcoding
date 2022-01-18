@@ -312,7 +312,7 @@ colnames(mat_dist2) <- as.factor(motus2$id[motus2$count >3000])
 
 ```{r}
 motus2_ref <- dans_ref(motus2, reference)
-motus2_ref
+# motus2_ref
 ```
 
 réalisation d'une fonction pour calculer la matrice de proba
@@ -414,27 +414,71 @@ vérification de si on s'est trompé
 ## Obtention d'un vecteur contenant le nombre de reads des différentes espèces observées.
 
 ```{r}
-# matrix(motus2_ref$count) %*% matrix(mat_proba2) # problème car le vecteur et la matrice n'ont pas les même dimensions
-
-
 motus2[,c("id","count")] %>% filter(count >3000) %>% left_join(select(motus2_ref, id), by = c("id" = "id")) -> vect_count
 
-vect_count
+# obtention d'une matrice avec le nom et le nombre de reads des motus présents dans la base de données, le vecteur avec les counts a la même dimension que la matrice de proba
 
+# View(vect_count)
 
-a = matrix(1:4, 1, 4, TRUE)
-b = matrix(1:16, 4, 4, TRUE)
-a
-b
-a %*% b
+# length(vect_count$count)
+# nrow(mat_proba2) # petite verif que les dimensions sont bien les mêmes
+
+count_th <- t(t(vect_count$count) %*% mat_proba2) # produit matriciel entre la matrice de proba et le vecteur contenant les counts de la base de données utilisé
+
+# View(count_th)
+
+count_th <- count_th[apply(count_th, 1, function(row) all(row !=0 )), ] # suppression des colonnes avec 0 afin de peut être reduire le temps de calcul taille passe de 857 à 163)
+# count_th
 ```
 
 
+## Calcul du spectre de Hill
+
+```{r}
+q_values = seq(0,3,0.1)
+
+comparaison_spectre_hill = data_frame()
+d = data.frame(donnee = "réctifié", q = q_values)
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = count_th, q = q)))
+
+d = data.frame(donnee = "brut", q = q_values)
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2$count, q = q)))
+
+d = data.frame(donnee = "dans ref", q = q_values)
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2_ref[motus2_ref$dans_ref == T,]$count, q = q)))
+
+count_th_df <- as.data.frame(count_th)
+count_th_df$motu <-row.names(count_th_df)
+count_th_df %>% left_join(select(motus2_ref,id,dans_ref) , by = c( "motu" = "id")) -> count_th_ref
+# count_th_ref # rajouter une colonne indiquant si le motu est dans la ref
+
+d = data.frame(donnee = "dans ref + mutants", q = q_values)
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = count_th_ref[count_th_ref$dans_ref == T,]$count, q = q)))
+
+comparaison_spectre_hill
+
+
+ggplot(data = comparaison_spectre_hill, aes(x = q, y = Qd, group = donnee, colour = donnee)) +
+  geom_line() +
+  scale_y_log10() +
+  ggtitle("Comparaison des spectres de Hill selon le filtre appliqué") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+même sans tracer le spectre de Hill brut, il semblerait que la pente soit moins abrupte dans les petites valeurs de q
+
+regarder ceux qui sont dans count_th combien appartiennent à la ref
+
+
+
+## Effectuer une comparaison par rapport au spectre de Hill Brut
 
 
 
 
+```{r}
 
+```
 
 
 

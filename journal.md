@@ -100,3 +100,9 @@ dev.off() # ferme le pdf
 
 # Lundi 17 Janvier
 - rédaction de la matrice de proba agrégée permettant d'attribuer les motu à l'espèce dont ils sont dérivés
+- produit matriciel afin d'obtenir le nombre de count agrégé en regroupant les mutants avec leurs potentiel parent.
+- tracé du spectre de hill brut et de celui rectifié
+
+# Mardi 18 janvier
+
+- tracé des spectre de hill pour les bases de données avec les motus dans la ref et ceux dans la ref avec leurs variants.
