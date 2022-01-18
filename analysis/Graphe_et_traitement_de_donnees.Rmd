@@ -425,7 +425,10 @@ motus2[,c("id","count")] %>% filter(count >3000) %>% left_join(select(motus2_ref
 
 count_th <- t(t(vect_count$count) %*% mat_proba2) # produit matriciel entre la matrice de proba et le vecteur contenant les counts de la base de données utilisé
 
-# View(count_th)
+View(count_th)
+# 
+# count_th[count_th == 0] <- NULL
+# str(count_th)
 
 count_th <- count_th[apply(count_th, 1, function(row) all(row !=0 )), ] # suppression des colonnes avec 0 afin de peut être reduire le temps de calcul taille passe de 857 à 163)
 # count_th
@@ -480,15 +483,11 @@ data2 %>% left_join(select(samples2,id,observed_scientific_name) , by = c("sampl
   drop_na() %>% rename(espece = observed_scientific_name) -> data2
 ```
 
-pour lier les nom des espèces aux echantillons qui leurs appartiennent
+pour lier les nom des espèces aux échantillons qui leurs appartiennent
 
 
 ```{r}
 data2 %>% group_by(espece,motu) %>% summarise(count = sum(count)) -> data2_short # regroupement des count d'un même motu pour chaque espèce
-
-
-data2_short[data2_short$espece == especes[1],c("motu","count")] %>% right_join(select(motus2_ref[motus2_ref$count > 3000,], id), by = c("motu" = "id")) -> sub_vect_count
-sub_vect_count
 ```
 
 
@@ -503,41 +502,28 @@ df_spectre_hill = data.frame()
 for (e in especes[1:9]) {
   d = data.frame(espece = e, donnee = "Brut" ,q = q_values)
   val = data2_short[data2_short$espece == e,]$count
-  df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q))) # spectre de hill pour tout les echantillons aprtenant à une même espèce
+  df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q))) 
+  
+  d = data.frame(espece = e, donnee = "Rectifié" ,q = q_values)
+  data2_short[data2_short$espece == e, c("motu","count")] %>% right_join(select(motus2_ref[motus2_ref$count > 3000,], id), by = c("motu" = "id")) -> sub_vect_count # rédaction d'un vecteur avec les counts et de la dimension de la matrice de proba
+  sub_vect_count[is.na(sub_vect_count$count),]$count <- 0 # remplacement des NA par des 0
+  sub_count_th <- t(t(sub_vect_count$count) %*% mat_proba2)# produit matriciel entre count et mat proba
+  sub_count_th <- sub_count_th[apply(sub_count_th, 1, function(row) all(row !=0 )), ] # retirer le 0
+  val = sub_count_th
+  df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q))) # spectre de hill pour tout les échantillons apparentant à une même espèce
+  
 }
 
 # View(df_spectre_hill)
 Graph <- ggplot(data = df_spectre_hill, aes(x = q, y = Qd, colour = donnee)) +
   geom_line() +
   scale_y_log10() +
-  ggtitle("Spectre de Hill pour les échantillons par espèce") +
+  ggtitle("Spectre de Hill selon le filtre par espèce") +
   theme(plot.title = element_text(hjust = 0.5))
 
 Graph + facet_wrap(facets = ~ (as.numeric(as.factor(espece))%%9))
 ```
 
-```{r}
-# data2[data2$espece == especes[1],]
-
-data2 %>% group_by(espece,motu) %>% summarise(count = sum(count)) -> data2_short
-View(data2_short)
-data2_short[data2_short$espece == especes[1],]
-```
-
-
-
-
-```{r}
-motus2[,c("id","count")]
-data2_short[data2_short$espece == especes[1],c("motu","count")] #permet de ne selectionner que les deux colonnes de data2 short pour l'espèce 1
-
-data2_short[data2_short$espece == especes[1],c("motu","count")] %>% right_join(select(motus2_ref[motus2_ref$count > 3000,], id), by = c("motu" = "id")) -> sub_vect_count
-sub_vect_count
-
-
-nrow(motus2_ref[motus2_ref$count > 3000,])
-nrow(mat_proba2)
-```
 
 
 
