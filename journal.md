@@ -113,3 +113,4 @@ dev.off() # ferme le pdf
 - correction des erreurs avec l'aide de sylvain
 - tracé des spectre des hill brutes selon le filtre leurs étant appliqué
 - tracé des spectre de Hills rectifié pour chacune des espèces
+- acp

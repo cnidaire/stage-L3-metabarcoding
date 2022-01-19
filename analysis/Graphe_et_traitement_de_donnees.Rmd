@@ -430,7 +430,7 @@ count_th <- t(t(vect_count$count) %*% mat_proba2) # produit matriciel entre la m
 
 colnames(count_th) = "count"
 
-length(which(count_th !=0 ))
+# length(which(count_th !=0 ))
 
 # View(count_th)
 # 
@@ -476,6 +476,8 @@ ggplot(data = comparaison_spectre_hill, aes(x = q, y = Qd, group = donnee, colou
   scale_y_log10() +
   ggtitle("Comparaison des spectres de Hill selon le filtre appliqué") +
   theme(plot.title = element_text(hjust = 0.5))
+
+
 ```
 
 
@@ -618,7 +620,7 @@ ggplot(data = comparaison_filtres_spectre_hill, aes(x = q, y = Qd, group = filt,
   scale_y_log10() +
   ggtitle("Comparaison des spectres de Hill des données brutes \n selon le filtre appliqué") +
   theme(plot.title = element_text(hjust = 0.5))
-summary(motus2)
+# summary(motus2)
 ```
 
 # Comparaison de la diversité du regime alimentaire de espèces
@@ -652,5 +654,74 @@ Graph + facet_wrap(facets = ~ (as.numeric(as.factor(espece))%%1))
 ```
 
 
+# ACP
+
+## construction d'un dataframe conenant le nombre de read rectifié par espèces 
+
+```{r}
+df_espece = data.frame()
+for (e in especes) {
+  data2_short[data2_short$espece == e, c("motu","count")] %>% right_join(select(motus2_ref[motus2_ref$count > 3000,], id), by = c("motu" = "id")) -> sub_vect_count # rédaction d'un vecteur avec les counts et de la dimension de la matrice de proba
+  sub_vect_count[is.na(sub_vect_count$count),]$count <- 0 # remplacement des NA par des 0
+  
+  sub_count_th <- t(t(sub_vect_count$count) %*% mat_proba2)# produit matriciel entre count et mat proba
+  mini_df_espece <- t(as.numeric(sub_count_th))
+  # sub_count_th <- t(t(sub_vect_count$count) %*% mat_proba2)# produit matriciel entre count et mat proba
+  # colnames(sub_count_th) = "count"
+  # View(mini_df_espece)
+  df_espece <- rbind(df_espece, mini_df_espece)
+  df_espece
+}
+ncol(df_espece)
+colnames(df_espece) = motus2_ref[motus2_ref$count > 3000,]$id
+rownames(df_espece) = especes
+
+a_retirer <- c()
+for (a in 1:ncol(df_espece)) {
+  if (setequal(df_espece[,a],rep(0,17))) {
+    a_retirer <- rbind(a_retirer,a)
+  }
+}
+a_retirer
+df_espece[,a_retirer] = NULL
+
+df_espece
 
 
+str(df_espece)
+
+for (a in 1:nrow(df_espece)) {
+  df_espece[a,] <- df_espece[a,]/nrow(samples2[samples2$observed_scientific_name == rownames(df_espece)[a],])
+}
+
+
+
+df_espece
+rowSums(df_espece)
+sum(motus2$count)
+
+nrow(samples2[samples2$observed_scientific_name == rownames(df_espece)[1],])
+```
+
+```{r}
+library(ade4)
+
+a <- dudi.pca(df_espece, nf=ncol(df_espece), scannf = F)
+# a
+inertia.dudi(a, col.inertia = T,row.inertia = T)$tot.inertia
+s.label(a$li,xax = 1, yax = 2, sub = "axe 1 et 2",clabel = 0.5)
+s.label(a$li,xax = 2, yax = 3, sub = "axe 2 et 3",clabel = 0.5)
+s.label(a$li,xax = 3, yax = 4, sub = "axe 3 et 4",clabel = 0.5)
+s.label(a$li,xax = 4, yax = 5, sub = "axe 4 et 5",clabel = 0.5)
+s.label(a$li,xax = 5, yax = 6, sub = "axe 5 et 6",clabel = 0.5)
+a$li
+# summary(a$co[,1])
+```
+
+Oryx gazella
+Struthio camelus
+Hystrix africaeaaustralis
+Papio ursinus
+Aepyceros melampus
+
+ces espèces semblent avoir un regime alimentaire similaire
