@@ -22,6 +22,7 @@ library(tidyr) #idem
 library(stringr) #pour manipuler les chaînes de caractères
 library(openxlsx) #pour manipuler les fichiers .xlsx
 library(igraph)
+library(plotly)
 ```
 
 ```{r}
@@ -456,6 +457,9 @@ comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>
 d = data.frame(donnee = "brut dont \n count > 3000", q = q_values)
 comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2$count[ motus2$count>3000], q = q)))
 
+d = data.frame(donnee = "brut dont \n count > 1e5", q = q_values)
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2$count[ motus2$count>1e5], q = q)))
+
 d = data.frame(donnee = "dans ref", q = q_values)
 comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2_ref[motus2_ref$dans_ref & motus2_ref$count>3000,]$count, q = q)))
 
@@ -516,6 +520,7 @@ especes = especes[!is.na(especes)]
 q_values = seq(0,3,0.2)
 
 
+
 df_spectre_hill = data.frame()
 for (e in especes[1:9]) {
   d = data.frame(espece = e, donnee = "Brut sans filtre" ,q = q_values)
@@ -526,12 +531,21 @@ for (e in especes[1:9]) {
   data2_short[data2_short$espece == e, c("motu","count")] %>% right_join(select(motus2_ref[motus2_ref$count > 3000,], id), by = c("motu" = "id")) -> sub_vect_count # rédaction d'un vecteur avec les counts et de la dimension de la matrice de proba
   sub_vect_count[is.na(sub_vect_count$count),]$count <- 0 # remplacement des NA par des 0
   sub_count_th <- t(t(sub_vect_count$count) %*% mat_proba2)# produit matriciel entre count et mat proba
+  colnames(sub_count_th) = "count"
   val = sub_count_th
   df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q))) # spectre de hill pour tout les échantillons apparentant à une même espèce
   
   d = data.frame(espece = e, donnee = "Dans ref" ,q = q_values)
   val = data2_short_ref[data2_short_ref$dans_ref == T & data2_short_ref$espece ==e,]$count
   df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q)))
+  
+  sub_count_th_df <- as.data.frame(sub_count_th)
+  sub_count_th_df$motu <-row.names(sub_count_th_df)
+  sub_count_th_df %>% left_join(select(motus2_ref,id,dans_ref) , by = c( "motu" = "id")) -> sub_count_th_ref
+  d = data.frame(espece = e, donnee = "Dans ref + mutants" ,q = q_values)
+  val = sub_count_th_ref[sub_count_th_ref$dans_ref,]$count
+  df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q)))
+  
 }
 
 # View(df_spectre_hill)
@@ -544,28 +558,99 @@ Graph <- ggplot(data = df_spectre_hill, aes(x = q, y = Qd, colour = donnee)) +
 Graph + facet_wrap(facets = ~ (as.numeric(as.factor(espece))%%9))
 ```
 
-
-
-ajouter dans ref et dans ref + mutant en utilisant data2_short
-
-pour cela, il faudra créer une nouvelle colonne dans ref à côté de data2 short -> dans ref
-
+## mise en pdf
 ```{r}
-df_spectre_hill = data.frame()
-
-d = data.frame(espece = especes [1], donnee = "Rectifié" ,q = q_values)
-data2_short[data2_short$espece == especes [1], c("motu","count")] %>% right_join(select(motus2_ref[motus2_ref$count > 3000,], id), by = c("motu" = "id")) -> sub_vect_count # rédaction d'un vecteur avec les counts et de la dimension de la matrice de proba
-sub_vect_count[is.na(sub_vect_count$count),]$count <- 0 # remplacement des NA par des 0
-sub_count_th <- t(t(sub_vect_count$count) %*% mat_proba2)# produit matriciel entre count et mat proba
-sub_count_th <- sub_count_th[apply(sub_count_th, 1, function(row) all(row !=0 )), ] # retirer le 0
-val = sub_count_th
-df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q))) # spectre de hill pour tout les échantillons apparentant à une même espèce
-
-df_spectre_hill
+pdf("Comparaison des spectres de Hill des espèces.pdf") # démarre l'écriture dans le pdf
+  df_spectre_hill = data.frame()
+  q_values = seq(0,3,0.1)
+  for (e in especes) {
+    df_spectre_hill = data.frame()
+    d = data.frame(espece = e, donnee = "Brut sans filtre" ,q = q_values)
+    val = data2_short[data2_short$espece == e,]$count
+    df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q))) 
+    
+    d = data.frame(espece = e, donnee = "Rectifié" ,q = q_values)
+    data2_short[data2_short$espece == e, c("motu","count")] %>% right_join(select(motus2_ref[motus2_ref$count > 3000,], id), by = c("motu" = "id")) -> sub_vect_count
+    sub_vect_count[is.na(sub_vect_count$count),]$count <- 0
+    sub_count_th <- t(t(sub_vect_count$count) %*% mat_proba2)
+    colnames(sub_count_th) = "count"
+    val = sub_count_th
+    df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q))) 
+    
+    d = data.frame(espece = e, donnee = "Dans ref" ,q = q_values)
+    val = data2_short_ref[data2_short_ref$dans_ref == T & data2_short_ref$espece ==e,]$count
+    df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q)))
+    
+    sub_count_th_df <- as.data.frame(sub_count_th)
+    sub_count_th_df$motu <-row.names(sub_count_th_df)
+    sub_count_th_df %>% left_join(select(motus2_ref,id,dans_ref) , by = c( "motu" = "id")) -> sub_count_th_ref
+    d = data.frame(espece = e, donnee = "Dans ref + mutants" ,q = q_values)
+    val = sub_count_th_ref[sub_count_th_ref$dans_ref,]$count
+    df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q)))
+    
+    Graph <- ggplot(data = df_spectre_hill, aes(x = q, y = Qd, colour = donnee)) +
+    geom_line() +
+    scale_y_log10() +
+    ggtitle(paste("Spectre de Hill selon le filtre de",e)) +
+    theme(plot.title = element_text(hjust = 0.5))
+  
+    print(Graph)
+  }
+dev.off() # ferme le pdf
 ```
 
+# Tracer les spectre de Hill bruts avec des filtre de différentes puissance sur les Counts
 
-dans l'autre il faudra se débrouiller avec le sub_count_th calculé précédemment dans la boucle for : rajouter une colonne dans la ref et ne sélectionner que les motus appartenant à la ref comme ce qui a été fait précédemment dans la base de données en entier.
+```{r}
+q_values = seq(0,3,0.1)
+filtre <- c(0,1000,1500,3000,5000,1e4,1e5,1e6)
+# filtre <- c(0,3000)
+comparaison_filtres_spectre_hill = data_frame()
+for (f in filtre) {
+  d = data.frame(filt = f, q = q_values)
+  comparaison_filtres_spectre_hill <- rbind(comparaison_filtres_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2$count[ motus2$count>f], q = q)))
+}
+
+
+
+ggplot(data = comparaison_filtres_spectre_hill, aes(x = q, y = Qd, group = filt, colour = as.factor(filt))) +
+  geom_line() +
+  scale_y_log10() +
+  ggtitle("Comparaison des spectres de Hill des données brutes \n selon le filtre appliqué") +
+  theme(plot.title = element_text(hjust = 0.5))
+summary(motus2)
+```
+
+# Comparaison de la diversité du regime alimentaire de espèces
+
+```{r}
+especes = unique(data2$espece)
+especes = especes[!is.na(especes)]
+q_values = seq(0,3,0.2)
+
+
+
+df_spectre_hill = data.frame()
+for (e in especes) {
+  d = data.frame(espece = e, q = q_values)
+  data2_short[data2_short$espece == e, c("motu","count")] %>% right_join(select(motus2_ref[motus2_ref$count > 3000,], id), by = c("motu" = "id")) -> sub_vect_count # rédaction d'un vecteur avec les counts et de la dimension de la matrice de proba
+  sub_vect_count[is.na(sub_vect_count$count),]$count <- 0 # remplacement des NA par des 0
+  sub_count_th <- t(t(sub_vect_count$count) %*% mat_proba2)# produit matriciel entre count et mat proba
+  colnames(sub_count_th) = "count"
+  val = sub_count_th
+  df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q))) # spectre de hill pour tout les échantillons apparentant à une même espèce
+}
+
+# View(df_spectre_hill)
+Graph <- ggplot(data = df_spectre_hill, aes(x = q, y = Qd, group_by= espece ,colour = espece)) +
+  geom_line() +
+  scale_y_log10() +
+  ggtitle("Spectre de Hill rectifiés des espece") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+Graph + facet_wrap(facets = ~ (as.numeric(as.factor(espece))%%1))
+```
+
 
 
 
