@@ -50,7 +50,7 @@ matrice_distance <- function(base_donnee, seuil) {
   return(matrice_dist)
 }
 
-distance <- matrice_distance(motus2, 2000)
+# distance <- matrice_distance(motus2, 2000)
 # ncol(distance)
 # nrow(distance)
 # View(distance)
@@ -73,7 +73,6 @@ dans_ref <- function(base_donnee, ref){
   return(base_donnee)
 }
 
-motus2_ref <- dans_ref(motus2, reference)
 ```
 
 Ici, on annote la base de données en ajoutant une nouvelle colonne et si la séquence appartient à la base de données, alors, il y a marqué True dans la base de données.
@@ -109,7 +108,7 @@ matrice_adjacence <- function(matrice_distance, base_donnee_ref){
   return(matrice_adj)
 }
 
-matrice_adj <- matrice_adjacence(distance, motus2_ref)
+# matrice_adj <- matrice_adjacence(distance, motus2_ref)
 # nrow(matrice_adj)
 # ncol(matrice_adj)
 # View(matrice_adj)
@@ -135,7 +134,7 @@ liste_couleur <- function(matrice_distance, base_donnee_ref){
   return(couleur)
 }
 
-couleur <- liste_couleur(distance, motus2_ref)
+# couleur <- liste_couleur(distance, motus2_ref)
 # length(couleur)
 # couleur[2:5]
 ```
@@ -194,9 +193,12 @@ data %>% left_join(select(samples,id,observed_scientific_name) , by = c("sample"
 
 ```{r}
 spectre_hill <- function(val,q){
+  val <- val[val !=0]
   ps <- val/sum(val)
   if (q == 1) {
     a <- exp(-sum(ps*log(ps)))
+  }else if (q == 0){
+    a <-length(val)
   }else {
     a <- sum(ps^q)^(1/(1-q))
   }
@@ -425,12 +427,16 @@ motus2[,c("id","count")] %>% filter(count >3000) %>% left_join(select(motus2_ref
 
 count_th <- t(t(vect_count$count) %*% mat_proba2) # produit matriciel entre la matrice de proba et le vecteur contenant les counts de la base de données utilisé
 
-View(count_th)
+colnames(count_th) = "count"
+
+length(which(count_th !=0 ))
+
+# View(count_th)
 # 
 # count_th[count_th == 0] <- NULL
 # str(count_th)
 
-count_th <- count_th[apply(count_th, 1, function(row) all(row !=0 )), ] # suppression des colonnes avec 0 afin de peut être reduire le temps de calcul taille passe de 857 à 163)
+# count_th <- count_th[apply(count_th, 1, function(row) all(row !=0 )), ] # suppression des colonnes avec 0 afin de peut être reduire le temps de calcul taille passe de 857 à 163)
 # count_th
 ```
 
@@ -444,11 +450,14 @@ comparaison_spectre_hill = data_frame()
 d = data.frame(donnee = "réctifié", q = q_values)
 comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = count_th, q = q)))
 
-d = data.frame(donnee = "brut", q = q_values)
+d = data.frame(donnee = "brut sans filtre", q = q_values)
 comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2$count, q = q)))
 
+d = data.frame(donnee = "brut dont \n count > 3000", q = q_values)
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2$count[ motus2$count>3000], q = q)))
+
 d = data.frame(donnee = "dans ref", q = q_values)
-comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2_ref[motus2_ref$dans_ref == T,]$count, q = q)))
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2_ref[motus2_ref$dans_ref & motus2_ref$count>3000,]$count, q = q)))
 
 count_th_df <- as.data.frame(count_th)
 count_th_df$motu <-row.names(count_th_df)
@@ -456,10 +465,7 @@ count_th_df %>% left_join(select(motus2_ref,id,dans_ref) , by = c( "motu" = "id"
 # count_th_ref # rajouter une colonne indiquant si le motu est dans la ref
 
 d = data.frame(donnee = "dans ref + mutants", q = q_values)
-comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = count_th_ref[count_th_ref$dans_ref == T,]$count, q = q)))
-
-# comparaison_spectre_hill
-
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = count_th_ref[count_th_ref$dans_ref,]$count, q = q)))
 
 ggplot(data = comparaison_spectre_hill, aes(x = q, y = Qd, group = donnee, colour = donnee)) +
   geom_line() +
@@ -467,6 +473,15 @@ ggplot(data = comparaison_spectre_hill, aes(x = q, y = Qd, group = donnee, colou
   ggtitle("Comparaison des spectres de Hill selon le filtre appliqué") +
   theme(plot.title = element_text(hjust = 0.5))
 ```
+
+
+
+une valeur élévé dans le spectre de Hill correspond à des espèce mieux réparties pour une même nombre d'espèces.
+```{r}
+which(motus2_ref$dans_ref)
+```
+
+dans ref + mutants légèrement + bas que dans ref ces qui signifie que quand on rajoute les mutant, ses écarts de répartition des espèces se creusent.
 
 regarder ceux qui sont dans count_th combien appartiennent à la ref
 ```{r}
@@ -488,6 +503,9 @@ pour lier les nom des espèces aux échantillons qui leurs appartiennent
 
 ```{r}
 data2 %>% group_by(espece,motu) %>% summarise(count = sum(count)) -> data2_short # regroupement des count d'un même motu pour chaque espèce
+
+data2_short %>% left_join(select(motus2_ref,id,dans_ref) , by = c("motu" = "id")) -> data2_short_ref # annotation afin de savoir pour chaque ligne si le motu associé appartient à la base de données
+which(is.na(data2_short_ref$dans_ref)) #vérification que toutes les lignes ont bien un booléen associé dans la colonne dans_ref
 ```
 
 
@@ -500,7 +518,7 @@ q_values = seq(0,3,0.2)
 
 df_spectre_hill = data.frame()
 for (e in especes[1:9]) {
-  d = data.frame(espece = e, donnee = "Brut" ,q = q_values)
+  d = data.frame(espece = e, donnee = "Brut sans filtre" ,q = q_values)
   val = data2_short[data2_short$espece == e,]$count
   df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q))) 
   
@@ -508,10 +526,12 @@ for (e in especes[1:9]) {
   data2_short[data2_short$espece == e, c("motu","count")] %>% right_join(select(motus2_ref[motus2_ref$count > 3000,], id), by = c("motu" = "id")) -> sub_vect_count # rédaction d'un vecteur avec les counts et de la dimension de la matrice de proba
   sub_vect_count[is.na(sub_vect_count$count),]$count <- 0 # remplacement des NA par des 0
   sub_count_th <- t(t(sub_vect_count$count) %*% mat_proba2)# produit matriciel entre count et mat proba
-  sub_count_th <- sub_count_th[apply(sub_count_th, 1, function(row) all(row !=0 )), ] # retirer le 0
   val = sub_count_th
   df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q))) # spectre de hill pour tout les échantillons apparentant à une même espèce
   
+  d = data.frame(espece = e, donnee = "Dans ref" ,q = q_values)
+  val = data2_short_ref[data2_short_ref$dans_ref == T & data2_short_ref$espece ==e,]$count
+  df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q)))
 }
 
 # View(df_spectre_hill)
@@ -526,9 +546,26 @@ Graph + facet_wrap(facets = ~ (as.numeric(as.factor(espece))%%9))
 
 
 
+ajouter dans ref et dans ref + mutant en utilisant data2_short
+
+pour cela, il faudra créer une nouvelle colonne dans ref à côté de data2 short -> dans ref
+
+```{r}
+df_spectre_hill = data.frame()
+
+d = data.frame(espece = especes [1], donnee = "Rectifié" ,q = q_values)
+data2_short[data2_short$espece == especes [1], c("motu","count")] %>% right_join(select(motus2_ref[motus2_ref$count > 3000,], id), by = c("motu" = "id")) -> sub_vect_count # rédaction d'un vecteur avec les counts et de la dimension de la matrice de proba
+sub_vect_count[is.na(sub_vect_count$count),]$count <- 0 # remplacement des NA par des 0
+sub_count_th <- t(t(sub_vect_count$count) %*% mat_proba2)# produit matriciel entre count et mat proba
+sub_count_th <- sub_count_th[apply(sub_count_th, 1, function(row) all(row !=0 )), ] # retirer le 0
+val = sub_count_th
+df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q))) # spectre de hill pour tout les échantillons apparentant à une même espèce
+
+df_spectre_hill
+```
 
 
-
+dans l'autre il faudra se débrouiller avec le sub_count_th calculé précédemment dans la boucle for : rajouter une colonne dans la ref et ne sélectionner que les motus appartenant à la ref comme ce qui a été fait précédemment dans la base de données en entier.
 
 
 

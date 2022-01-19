@@ -107,3 +107,7 @@ dev.off() # ferme le pdf
 
 - tracé des spectre de hill pour les bases de données avec les motus dans la ref et ceux dans la ref avec leurs variants.
 - pareil pour les différentes espèces pour le spectre brut et celui rectifié
+
+# Mercredi 19 Janvier
+
+- correction des erreurs avec l'aide de sylvain
