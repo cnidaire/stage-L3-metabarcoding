@@ -11,26 +11,297 @@ output:
     theme: united
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r message=FALSE, warning=FALSE}
+library(tidyverse) # permet de charger ggplot2, tibble, tidyr, readr, purrr, dyplyr
+library(ROBITools2) #analyse des données métabarcoding
+library(stringr) #pour manipuler les chaînes de caractères
+library(openxlsx) #pour manipuler les fichiers .xlsx
+library(igraph)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+motus2 <- read.table("motus_afrique_sud_remi2.txt")
+data2 <- read.table("data_afrique_sud_remi2.txt")
+samples2 <- read.table("samples_afrique_sud_remi2.txt")
+reference <- read.xlsx("Plant reference collection sequence information.xlsx", 
+                       sheet = 2)
 ```
 
-## Including Plots
+# Introduction
 
-You can also embed plots, for example:
+<p align="justify">
+L'objectif est d'estimer la biodiversité à partir de donnée de Métabarcoding( "technique de catalogage et d'identification moléculaire permettant la caractérisation génétique d'un individu ou d'un échantillon d'individu à partir d'une courte séquence d'ADN choisie en fonction du groupe étudié" : <em>Wikipedia</em>). <br>
+Le problème de cette technique est qu'il y aura des erreurs lors de la PCR. Ce qui sera problématique lors de l'étude de la biodiversité vu que si on traite pas les données, touts les mutants seront considérés comme des espèces.
+</p>
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+# Rédaction des différentes fonction
+
+## Calcul d'une matrice de distance entre les séquences d'un jeu de données
+
+Mise en place d'un filtre optionnel sur le nombre de lectures, permettant d'avoir un temps de calcul moins long. <br>
+Utilisation du package ROBITools2 pour calculer les distances entre chacune des séquences (ici, on ne prend pas en compte quelle est la mutation).
+
+```{r}
+matrice_distance <- function(base_donnee, seuil) {
+  base_donnee_bis <- base_donnee[base_donnee$count > seuil,] # création d'une nouvelle base de donné qui ne contient que des motus dont le nombre de reads est supérieur au seuil.
+  
+  x <- sapply(base_donnee_bis$sequence[1:nrow(base_donnee_bis)], lcs_score, base_donnee_bis$sequence[1:nrow(base_donnee_bis)], similarity_mode = "distance")
+  
+  matrice_dist <- matrix(unlist(x), nrow = length(base_donnee_bis$sequence[1:nrow(base_donnee_bis)]), ncol = length(base_donnee_bis$sequence[1:nrow(base_donnee_bis)]), byrow = T)
+  
+  return(matrice_dist)
+}
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Rajouter une colonne "dans ref" dans une base de donnée indiquant pour chacunes des sequences si elle est présente dans une base de reférence 
+
+```{r}
+dans_ref <- function(base_donnee, ref){
+  base_donnee[,"dans_ref"] <- F
+  nrow(base_donnee)
+  for (c in 1:nrow(base_donnee)) {
+    if (base_donnee$sequence[c] %in% ref$Sequence.ID) {
+      base_donnee$dans_ref[c] <- T
+      
+    }
+  }
+  return(base_donnee)
+}
+```
+
+## Calcul d'une matrice d'adjacence à partir d'une matrice de distance
+
+Ici, nous voulons réaliser une matrice d'adjacence, qui est construite selon trois cas pris en compte:<br>
+- Si l’espèce i appartient à la base de donnée alors elle ne descend de personne <br>
+- Sinon, si au moins une espèce se trouve à 1 de distance génétique de i et a plus de lectures que i, alors i descend d'elle(s) et <br> 
+- Sinon, nous définissons ce motu comme une nouvelle espèce, elle ne descend alors de personne . <br>
+
+```{r}
+matrice_adjacence <- function(matrice_distance, base_donnee_ref){
+  couleur <- NULL
+  matrice_adj <- matrix(data = NA, nrow = nrow(matrice_distance), ncol = ncol(matrice_distance))
+  for (i in 1:nrow(matrice_distance)) {
+    if (base_donnee_ref$dans_ref[i] == T) {
+      matrice_adj[i,] <- 0 # n'est lié à rien d'autre
+      couleur <- rbind(couleur, "green")
+    }else {
+      if (1 %in% matrice_distance[i,1:(i-1)]) { # si il y a au moins un motu à 1 de distance génétique
+        a <- which(matrice_distance[i,1:(i-1)] == 1) # on marque lesquels sont à un de distance
+        if (length(a) == 1) {
+          matrice_adj[i,] <- 0
+          matrice_adj[i,a] <- 1 # se rattache à cette espèce
+          couleur <- rbind(couleur, "yellow")
+        }else {
+          matrice_adj[i,] <- 0
+          matrice_adj[i,a] <- 1 # lié aux deux mais perte de l'info de la répartition entre les deux
+          couleur <- rbind(couleur, "yellow")
+        }
+      }else{
+        matrice_adj[i,] <- 0 # définition d'une probable nouvelle espèce
+        couleur <- rbind(couleur, "red")
+      }
+    }
+  }
+  return(matrice_adj)
+}
+```
+
+## Calcul d'une matrice de Probabilité
+
+Ici, nous voulons réaliser une matrice d'adjacence, qui est construite selon trois cas pris en compte:<br>
+- Si l’espèce i appartient à la base de donnée -> probabilité que i appartienne à lui même est de 1, qu'il appartienne à n'importe quelle autre espèce. <br>
+- Sinon, si au moins une espèce se trouve à 1 de distance génétique de i et a plus de lectures que i, alors elle répartis les lectures de i proportionnelement à celui des autres espèces. <br> 
+- Sinon, nous définissons ce motu comme une nouvelle espèce. <br>
+
+```{r}
+matrice_probabilite <- function(matrice_distance, base_donnee_ref){
+  matrice_proba <- matrix(data = NA, nrow = nrow(matrice_distance), ncol = ncol(matrice_distance))
+  for (i in 1:nrow(matrice_distance)) {
+    if (base_donnee_ref$dans_ref[i] == T) {
+      matrice_proba[i,] <- 0
+      matrice_proba[i,i] <- 1
+    }else {
+      if (1 %in% matrice_distance[i,1:(i-1)]) {
+        a <- which(matrice_distance[i,1:(i-1)] == 1)
+        if (length(a) == 1) {
+          matrice_proba[i,] <- 0
+          matrice_proba[i,a] <- 1
+        }else {
+          matrice_proba[i,] <- 0
+          matrice_proba[i,a] <- (base_donnee_ref$count[a]/sum(base_donnee_ref$count[a])) 
+        }
+      }else{
+        matrice_proba[i,] <- 0
+        matrice_proba[i,i] <- 1
+      }
+    }
+  }
+  return(matrice_proba)
+}
+```
+
+## Édition d'une liste permettant de colorer le graphe
+
+en vert nous mettons les espèces appartenant à la référence <br>
+en rouge les nouvelles espèces supposées <br>
+en jaune les variant supposés <br>
+
+```{r}
+liste_couleur <- function(matrice_distance, base_donnee_ref){
+  couleur <- NULL
+  matrice_adj <- matrix(data = NA, nrow = nrow(matrice_distance), ncol = ncol(matrice_distance))
+  for (i in 1:nrow(matrice_distance)) {
+    if (base_donnee_ref$dans_ref[i] == T) {
+      couleur <- rbind(couleur, "green")
+    }else {
+      if (1 %in% matrice_distance[i,1:(i-1)]) { # si il y a au moins un motu à 1 de distance génétique
+          couleur <- rbind(couleur, "yellow")
+      }else{
+        couleur <- rbind(couleur, "red")
+      }
+    }
+  }
+  return(couleur)
+}
+```
+
+## Tracé du graphe
+
+```{r}
+graphe <- function(matrice_adjacence,base_donnee, couleur) {
+  graph_liens <- graph_from_adjacency_matrix(matrice_adjacence[1:nrow(matrice_adjacence),1:nrow(matrice_adjacence)])
+  V(graph_liens)$color <- couleur
+  V(graph_liens)$size <- 3*log10(base_donnee$count)
+
+  return(tkplot(graph_liens, mode='directed'))
+}
+```
+
+## Calcul du spectre de Hill
+
+```{r}
+spectre_hill <- function(val,q){
+  val <- val[val !=0]
+  ps <- val/sum(val)
+  if (q == 1) {
+    a <- exp(-sum(ps*log(ps)))
+  }else if (q == 0){
+    a <-length(val)
+  }else {
+    a <- sum(ps^q)^(1/(1-q))
+  }
+  return(a)
+}
+```
+
+# Tracé du graphe des distances de Motu
+
+```{r}
+distance <- matrice_distance(motus2, 2000)
+motus2_ref <- dans_ref(motus2,reference)
+matrice_adj <- matrice_adjacence(distance, motus2_ref)
+couleur <- liste_couleur(distance, motus2_ref)
+graphe(matrice_adj, motus2, couleur)
+```
+
+# Tracé des spectre de hill selon les différents filtres appliqués aux données
+
+## Calcul du spectre de Hill
+
+mettre les sequences d'adn de sample vers data
+
+```{r}
+data2 %>% left_join(select(motus2,id,sequence) , by = c("motu" = "id")) %>%
+  drop_na() -> data2
+head(data2)
+```
+
+```{r}
+mat_dist2 <- matrice_distance(motus2,3000)
+rownames(mat_dist2) <- as.factor(motus2$id[motus2$count >3000])
+colnames(mat_dist2) <- as.factor(motus2$id[motus2$count >3000])
+```
+
+```{r}
+motus2_ref <- dans_ref(motus2, reference)
+
+mat_proba2 <- matrice_probabilite(mat_dist2, motus2_ref)
+rownames(mat_proba2) <- as.factor(motus2$id[motus2$count >3000])
+colnames(mat_proba2) <- as.factor(motus2$id[motus2$count >3000])
+```
+
+```{r}
+for (a in 1:nrow(mat_proba2)) {
+  enfants <- which(mat_proba2[,a] != 0)
+  if (mat_proba2[a,a] != 1 & length(enfants) != 0) {
+    parents <- which(mat_proba2[a,] != 0)
+    mat_proba2[enfants, parents] <- mat_proba2[enfants,parents] + matrix(mat_proba2[enfants,a], nrow = length(enfants)) %*% matrix(mat_proba2[a,parents],nrow = 1)
+    mat_proba2[enfants,a] <- 0
+    
+  }
+}
+```
+
+```{r}
+parentee <- function(indiv) {
+  setequal(indiv ,which(mat_proba2[indiv,] != 0))
+}
+  
+faux = 0
+for (a in 1:nrow(mat_proba2)) {
+  parent_a <- which(mat_proba2[a,] != 0)
+  if ( length(which(!sapply(parent_a,parentee))) != 0 ) {
+    faux <- faux + 1
+    print(a)
+  }
+}
+faux
+nrow(mat_proba2)
+```
+
+```{r}
+motus2[,c("id","count")] %>% filter(count >3000) %>% left_join(select(motus2_ref, id), by = c("id" = "id")) -> vect_count
+```
+
+```{r}
+count_th <- t(t(vect_count$count) %*% mat_proba2) # produit matriciel entre la matrice de proba et le vecteur contenant les counts de la base de données utilisé
+
+colnames(count_th) = "count"
+```
+
+```{r}
+q_values = seq(0,3,0.1)
+
+comparaison_spectre_hill = data_frame()
+d = data.frame(donnee = "réctifié", q = q_values)
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = count_th, q = q)))
+
+d = data.frame(donnee = "brut sans filtre", q = q_values)
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2$count, q = q)))
+
+d = data.frame(donnee = "brut dont \n count > 3000", q = q_values)
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2$count[ motus2$count>3000], q = q)))
+
+d = data.frame(donnee = "brut dont \n count > 1e5", q = q_values)
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2$count[ motus2$count>1e5], q = q)))
+
+d = data.frame(donnee = "dans ref", q = q_values)
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2_ref[motus2_ref$dans_ref & motus2_ref$count>3000,]$count, q = q)))
+
+count_th_df <- as.data.frame(count_th)
+count_th_df$motu <-row.names(count_th_df)
+count_th_df %>% left_join(select(motus2_ref,id,dans_ref) , by = c( "motu" = "id")) -> count_th_ref
+# count_th_ref # rajouter une colonne indiquant si le motu est dans la ref
+
+d = data.frame(donnee = "dans ref + mutants", q = q_values)
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = count_th_ref[count_th_ref$dans_ref,]$count, q = q)))
+
+ggplot(data = comparaison_spectre_hill, aes(x = q, y = Qd, group = donnee, colour = donnee)) +
+  geom_line() +
+  scale_y_log10() +
+  ggtitle("Comparaison des spectres de Hill selon le filtre appliqué") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+```
+

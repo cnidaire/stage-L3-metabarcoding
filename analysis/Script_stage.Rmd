@@ -546,7 +546,7 @@ V(graph_liens)$size <- taille_vertex
 # E(graph_liens)$size <- c(10)
 # V(graph_liens)$color[,ds_ref == T] <- "red"
 
-# tkplot(graph_liens, mode='directed')
+tkplot(graph_liens, mode='directed')
 ```
 vert si espèce définie dans la base de données de ref
 rouge si espèce nouvellement définie (ici, il n''y en a aucune)

@@ -51,7 +51,7 @@ matrice_distance <- function(base_donnee, seuil) {
   return(matrice_dist)
 }
 
-# distance <- matrice_distance(motus2, 2000)
+distance <- matrice_distance(motus2, 2000)
 # ncol(distance)
 # nrow(distance)
 # View(distance)
@@ -109,7 +109,7 @@ matrice_adjacence <- function(matrice_distance, base_donnee_ref){
   return(matrice_adj)
 }
 
-# matrice_adj <- matrice_adjacence(distance, motus2_ref)
+matrice_adj <- matrice_adjacence(distance, motus2_ref)
 # nrow(matrice_adj)
 # ncol(matrice_adj)
 # View(matrice_adj)
@@ -135,7 +135,7 @@ liste_couleur <- function(matrice_distance, base_donnee_ref){
   return(couleur)
 }
 
-# couleur <- liste_couleur(distance, motus2_ref)
+couleur <- liste_couleur(distance, motus2_ref)
 # length(couleur)
 # couleur[2:5]
 ```
@@ -173,7 +173,7 @@ graphe <- function(matrice_adjacence,base_donnee, couleur) {
 
   return(tkplot(graph_liens, mode='directed'))
 }
-# graphe(matrice_adj, motus2, couleur)
+graphe(matrice_adj, motus2, couleur)
 ```
 
 
@@ -724,4 +724,4 @@ Hystrix africaeaaustralis
 Papio ursinus
 Aepyceros melampus
 
-ces espèces semblent avoir un regime alimentaire similaire
+ces espèces semblent avoir un régime alimentaire similaire mais si on regarde plus en détail , on s'appercoit qu'il y a un nombre de lectures moyen par échantillon très faible.
