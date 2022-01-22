@@ -20,19 +20,19 @@ library(igraph)
 ```
 
 ```{r}
-motus2 <- read.table("motus_afrique_sud_remi2.txt")
-data2 <- read.table("data_afrique_sud_remi2.txt")
-samples2 <- read.table("samples_afrique_sud_remi2.txt")
+motus <- read.table("motus_afrique_sud_remi2.txt")
+data <- read.table("data_afrique_sud_remi2.txt")
+samples <- read.table("samples_afrique_sud_remi2.txt")
 reference <- read.xlsx("Plant reference collection sequence information.xlsx", 
                        sheet = 2)
 ```
 
 # Introduction
 
-<p align="justify">
+
 L'objectif est d'estimer la biodiversité à partir de donnée de Métabarcoding( "technique de catalogage et d'identification moléculaire permettant la caractérisation génétique d'un individu ou d'un échantillon d'individu à partir d'une courte séquence d'ADN choisie en fonction du groupe étudié" : <em>Wikipedia</em>). <br>
 Le problème de cette technique est qu'il y aura des erreurs lors de la PCR. Ce qui sera problématique lors de l'étude de la biodiversité vu que si on traite pas les données, touts les mutants seront considérés comme des espèces.
-</p>
+
 
 # Rédaction des différentes fonction
 
@@ -197,38 +197,56 @@ spectre_hill <- function(val,q){
 # Tracé du graphe des distances de Motu
 
 ```{r}
-distance <- matrice_distance(motus2, 2000)
-motus2_ref <- dans_ref(motus2,reference)
-matrice_adj <- matrice_adjacence(distance, motus2_ref)
-couleur <- liste_couleur(distance, motus2_ref)
-graphe(matrice_adj, motus2, couleur)
+distance <- matrice_distance(motus, 2000)
+motus_ref <- dans_ref(motus,reference)
+matrice_adj <- matrice_adjacence(distance, motus_ref)
+couleur <- liste_couleur(distance, motus_ref)
+graphe(matrice_adj, motus, couleur)
 ```
+# Ajout d'un seuil
+
+```{r}
+seuil_arbitraire <- 4000
+```
+
 
 # Tracé des spectre de hill selon les différents filtres appliqués aux données
 
-## Calcul du spectre de Hill
+## Fusion partielle des fichiers de motu et data
 
-mettre les sequences d'adn de sample vers data
-
-```{r}
-data2 %>% left_join(select(motus2,id,sequence) , by = c("motu" = "id")) %>%
-  drop_na() -> data2
-head(data2)
-```
+Mettre les séquences d'adn de sample vers data
 
 ```{r}
-mat_dist2 <- matrice_distance(motus2,3000)
-rownames(mat_dist2) <- as.factor(motus2$id[motus2$count >3000])
-colnames(mat_dist2) <- as.factor(motus2$id[motus2$count >3000])
+data %>% left_join(select(motus,id,sequence) , by = c("motu" = "id")) %>%
+  drop_na() -> data
+head(data)
 ```
+
+Ajout d'une colonne séquence dans la base de données data en fusionnant la colonne séquence de motus motu et id 
+
+## Matrice de distance
 
 ```{r}
-motus2_ref <- dans_ref(motus2, reference)
-
-mat_proba2 <- matrice_probabilite(mat_dist2, motus2_ref)
-rownames(mat_proba2) <- as.factor(motus2$id[motus2$count >3000])
-colnames(mat_proba2) <- as.factor(motus2$id[motus2$count >3000])
+mat_dist2 <- matrice_distance(motus,seuil_arbitraire)
+rownames(mat_dist2) <- as.factor(motus$id[motus$count >seuil_arbitraire])
+colnames(mat_dist2) <- as.factor(motus$id[motus$count >seuil_arbitraire])
 ```
+
+Création d'une matrice de distance sur les 3000 premières valeurs de motus puis attribution de noms aux colonnes
+
+## Matrice de Proba
+
+```{r}
+motus_ref <- dans_ref(motus, reference)
+
+mat_proba2 <- matrice_probabilite(mat_dist2, motus_ref)
+rownames(mat_proba2) <- as.factor(motus$id[motus$count >seuil_arbitraire])
+colnames(mat_proba2) <- as.factor(motus$id[motus$count >seuil_arbitraire])
+```
+
+Création d'une image de motus avec une colonne dans ref supplémentaire puis création d'une matrice de proba
+
+## Attribution des probabilitées d'appartenance des mutant à la sequence dont ils sont dérivés.
 
 ```{r}
 for (a in 1:nrow(mat_proba2)) {
@@ -241,6 +259,9 @@ for (a in 1:nrow(mat_proba2)) {
   }
 }
 ```
+
+Si une séquence a n'est pas attribuée à elle même (a un parent autre que lui) et qu'elle a des enfants (mutants lui étant dérivés), alors on ajoute la proba des enfants à celle des parents de a. \br
+Ainsi, les probabilités d'appartenance des séquences mutées sont donc maintenant redirigées vers le motu d'origine.
 
 ```{r}
 parentee <- function(indiv) {
@@ -259,15 +280,27 @@ faux
 nrow(mat_proba2)
 ```
 
+Vérification que toutes les probabilités des séquences mutées ont bien été attribuées au motu d'origine (ici, que le parent de a est bien le même que le parent du parent de a).
+
+## Vecteur contenant les counts
+
 ```{r}
-motus2[,c("id","count")] %>% filter(count >3000) %>% left_join(select(motus2_ref, id), by = c("id" = "id")) -> vect_count
+motus[,c("id","count")] %>% filter(count >seuil_arbitraire) %>% left_join(select(motus_ref, id), by = c("id" = "id")) -> vect_count
 ```
+
+Création d'un vecteur contenant les counts correspondant aux motus sélectionné dans la matrice de probabilité précédente.
+
+## Produit matriciel afin d'obtenir les counts théoriques
 
 ```{r}
 count_th <- t(t(vect_count$count) %*% mat_proba2) # produit matriciel entre la matrice de proba et le vecteur contenant les counts de la base de données utilisé
 
 colnames(count_th) = "count"
 ```
+
+Produit matriciel entre la vecteur de count et la matrice de proba afin d'obtenir un vecteur contenant le nombre de count théorique des motus d'origine.
+
+## Comparaison des spectres de Hill selon le filtre appliqué
 
 ```{r}
 q_values = seq(0,3,0.1)
@@ -277,20 +310,20 @@ d = data.frame(donnee = "réctifié", q = q_values)
 comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = count_th, q = q)))
 
 d = data.frame(donnee = "brut sans filtre", q = q_values)
-comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2$count, q = q)))
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus$count, q = q)))
 
 d = data.frame(donnee = "brut dont \n count > 3000", q = q_values)
-comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2$count[ motus2$count>3000], q = q)))
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus$count[ motus$count>3000], q = q)))
 
 d = data.frame(donnee = "brut dont \n count > 1e5", q = q_values)
-comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2$count[ motus2$count>1e5], q = q)))
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus$count[ motus$count>1e5], q = q)))
 
 d = data.frame(donnee = "dans ref", q = q_values)
-comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus2_ref[motus2_ref$dans_ref & motus2_ref$count>3000,]$count, q = q)))
+comparaison_spectre_hill <- rbind(comparaison_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus_ref[motus_ref$dans_ref & motus_ref$count>seuil_arbitraire,]$count, q = q)))
 
 count_th_df <- as.data.frame(count_th)
 count_th_df$motu <-row.names(count_th_df)
-count_th_df %>% left_join(select(motus2_ref,id,dans_ref) , by = c( "motu" = "id")) -> count_th_ref
+count_th_df %>% left_join(select(motus_ref,id,dans_ref) , by = c( "motu" = "id")) -> count_th_ref
 # count_th_ref # rajouter une colonne indiquant si le motu est dans la ref
 
 d = data.frame(donnee = "dans ref + mutants", q = q_values)
@@ -305,3 +338,181 @@ ggplot(data = comparaison_spectre_hill, aes(x = q, y = Qd, group = donnee, colou
 
 ```
 
+# Comparaison des spectre de hills par espèce
+
+## Fusion partielle de data avec samples afin d'obtenir pour chaque échantillon le nom de l'espèce dont il est issu
+
+```{r}
+data %>% left_join(select(samples,id,observed_scientific_name) , by = c("sample" = "id")) %>%
+  drop_na() %>% rename(espece = observed_scientific_name) -> data
+```
+
+pour lier les nom des espèces aux échantillons qui leurs appartiennent
+
+## Mise en forme des données
+
+
+```{r}
+data %>% group_by(espece,motu) %>% summarise(count = sum(count)) -> data_short # regroupement des count d'un même motu pour chaque espèce
+
+data_short %>% left_join(select(motus_ref,id,dans_ref) , by = c("motu" = "id")) -> data_short_ref # annotation afin de savoir pour chaque ligne si le motu associé appartient à la base de données
+which(is.na(data_short_ref$dans_ref)) #vérification que toutes les lignes ont bien un booléen associé dans la colonne dans_ref
+```
+
+## Comparaison des spectre de Hill selon les espèces
+
+```{r}
+# data %>% drop_na() -> data
+especes = unique(data$espece)
+especes = especes[!is.na(especes)]
+q_values = seq(0,3,0.2)
+
+
+
+df_spectre_hill = data.frame()
+for (e in especes[1:9]) {
+  d = data.frame(espece = e, donnee = "Brut sans filtre" ,q = q_values)
+  val = data_short[data_short$espece == e,]$count
+  df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q))) 
+  
+  d = data.frame(espece = e, donnee = "Rectifié" ,q = q_values)
+  data_short[data_short$espece == e, c("motu","count")] %>% right_join(select(motus_ref[motus_ref$count > seuil_arbitraire,], id), by = c("motu" = "id")) -> sub_vect_count # rédaction d'un vecteur avec les counts et de la dimension de la matrice de proba
+  sub_vect_count[is.na(sub_vect_count$count),]$count <- 0 # remplacement des NA par des 0
+  sub_count_th <- t(t(sub_vect_count$count) %*% mat_proba2)# produit matriciel entre count et mat proba
+  colnames(sub_count_th) = "count"
+  val = sub_count_th
+  df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q))) # spectre de hill pour tout les échantillons apparentant à une même espèce
+  
+  d = data.frame(espece = e, donnee = "Dans ref" ,q = q_values)
+  val = data_short_ref[data_short_ref$dans_ref == T & data_short_ref$espece ==e,]$count
+  df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q)))
+  
+  sub_count_th_df <- as.data.frame(sub_count_th)
+  sub_count_th_df$motu <-row.names(sub_count_th_df)
+  sub_count_th_df %>% left_join(select(motus_ref,id,dans_ref) , by = c( "motu" = "id")) -> sub_count_th_ref
+  d = data.frame(espece = e, donnee = "Dans ref + mutants" ,q = q_values)
+  val = sub_count_th_ref[sub_count_th_ref$dans_ref,]$count
+  df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q)))
+  
+}
+
+# View(df_spectre_hill)
+Graph <- ggplot(data = df_spectre_hill, aes(x = q, y = Qd, colour = donnee)) +
+  geom_line() +
+  scale_y_log10() +
+  ggtitle("Spectre de Hill selon le filtre par espèce") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+Graph + facet_wrap(facets = ~ (as.numeric(as.factor(espece))%%9))
+```
+
+# Tracer les spectre de Hill bruts avec des filtre de différentes puissance sur les Counts
+
+```{r}
+q_values = seq(0,3,0.1)
+filtre <- c(0,1000,1500,3000,5000,1e4,1e5,1e6)
+comparaison_filtres_spectre_hill = data_frame()
+for (f in filtre) {
+  d = data.frame(filt = f, q = q_values)
+  comparaison_filtres_spectre_hill <- rbind(comparaison_filtres_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = motus$count[ motus$count>f], q = q)))
+}
+
+
+
+ggplot(data = comparaison_filtres_spectre_hill, aes(x = q, y = Qd, group = filt, colour = as.factor(filt))) +
+  geom_line() +
+  scale_y_log10() +
+  ggtitle("Comparaison des spectres de Hill des données brutes \n selon le filtre appliqué") +
+  theme(plot.title = element_text(hjust = 0.5))
+# summary(motus)
+```
+
+# Comparaison de la diversité du regime alimentaire de espèces
+
+```{r}
+especes = unique(data$espece)
+especes = especes[!is.na(especes)]
+q_values = seq(0,3,0.2)
+
+
+
+df_spectre_hill = data.frame()
+for (e in especes) {
+  d = data.frame(espece = e, q = q_values)
+  data_short[data_short$espece == e, c("motu","count")] %>% right_join(select(motus_ref[motus_ref$count > seuil_arbitraire,], id), by = c("motu" = "id")) -> sub_vect_count # rédaction d'un vecteur avec les counts et de la dimension de la matrice de proba
+  sub_vect_count[is.na(sub_vect_count$count),]$count <- 0 # remplacement des NA par des 0
+  sub_count_th <- t(t(sub_vect_count$count) %*% mat_proba2)# produit matriciel entre count et mat proba
+  colnames(sub_count_th) = "count"
+  val = sub_count_th
+  df_spectre_hill <- rbind(df_spectre_hill, d %>% group_by(q) %>% mutate(Qd =  spectre_hill(val = val, q = q))) # spectre de hill pour tout les échantillons apparentant à une même espèce
+}
+
+# View(df_spectre_hill)
+Graph <- ggplot(data = df_spectre_hill, aes(x = q, y = Qd, group_by= espece ,colour = espece)) +
+  geom_line() +
+  scale_y_log10() +
+  ggtitle("Spectre de Hill rectifiés des espece") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+Graph + facet_wrap(facets = ~ (as.numeric(as.factor(espece))%%1))
+```
+
+
+# ACP
+
+## Construction d'un dataframe conenant le nombre de read rectifié par espèces 
+
+```{r}
+df_espece = data.frame()
+for (e in especes) {
+  data_short[data_short$espece == e, c("motu","count")] %>% right_join(select(motus_ref[motus_ref$count > seuil_arbitraire,], id), by = c("motu" = "id")) -> sub_vect_count # rédaction d'un vecteur avec les counts et de la dimension de la matrice de proba
+  sub_vect_count[is.na(sub_vect_count$count),]$count <- 0 # remplacement des NA par des 0
+  
+  sub_count_th <- t(t(sub_vect_count$count) %*% mat_proba2)# produit matriciel entre count et mat proba
+  mini_df_espece <- t(as.numeric(sub_count_th))
+  df_espece <- rbind(df_espece, mini_df_espece)
+  df_espece
+}
+
+colnames(df_espece) = motus_ref[motus_ref$count > seuil_arbitraire,]$id
+rownames(df_espece) = especes
+
+a_retirer <- c()
+for (a in 1:ncol(df_espece)) {
+  if (setequal(df_espece[,a],rep(0,17))) {
+    a_retirer <- rbind(a_retirer,a)
+  }
+}
+df_espece[,a_retirer] = NULL
+
+for (a in 1:nrow(df_espece)) {
+  df_espece[a,] <- df_espece[a,]/nrow(samples[samples$observed_scientific_name == rownames(df_espece)[a],])
+}
+
+
+
+df_espece
+rowSums(df_espece)
+```
+
+```{r}
+library(ade4)
+
+a <- dudi.pca(df_espece, nf=ncol(df_espece), scannf = F)
+
+inertia.dudi(a, col.inertia = T,row.inertia = T)$tot.inertia
+s.label(a$li,xax = 1, yax = 2, sub = "axe 1 et 2",clabel = 0.5)
+s.label(a$li,xax = 2, yax = 3, sub = "axe 2 et 3",clabel = 0.5)
+s.label(a$li,xax = 3, yax = 4, sub = "axe 3 et 4",clabel = 0.5)
+s.label(a$li,xax = 4, yax = 5, sub = "axe 4 et 5",clabel = 0.5)
+s.label(a$li,xax = 5, yax = 6, sub = "axe 5 et 6",clabel = 0.5)
+a$li
+```
+
+Oryx gazella
+Struthio camelus
+Hystrix africaeaaustralis
+Papio ursinus
+Aepyceros melampus
+
+Ces espèces semblent avoir un régime alimentaire similaire si on ne regarde que l'ACP. Cependant, si on regarde plus en détail , on s'appercoit qu'il y a un nombre de lectures moyen par échantillon très faible, ce qui fait que l'ACP les a regroupé ensemble.

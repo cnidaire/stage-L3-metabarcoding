@@ -114,3 +114,11 @@ dev.off() # ferme le pdf
 - tracé des spectre des hill brutes selon le filtre leurs étant appliqué
 - tracé des spectre de Hills rectifié pour chacune des espèces
 - acp
+
+# Jeudi 20 Janvier
+
+-présentation à sylvain Moinard et Eric Coissac de ce que j'ai fait durant mon stage
+
+# Samedi 22 Janvier
+
+- fin de la rédaction de la synthèse, il faudra cependant revenir dessus quand je saurais mieux faire de tidyverse pour rédiger plus efficacement.
